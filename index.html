@@ -236,6 +236,7 @@
     .btn.visible {
       transform: scale(1);
       opacity: 1;
+      pointer-events: auto;
     }
 
     .btn:hover {
@@ -524,7 +525,7 @@
 
     <!-- Intro Button -->
     <div class="ui-layer">
-      <button class="btn" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
+      <button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
     </div>
   </div>
 
@@ -644,6 +645,58 @@
 
     // === GAME STATE ===
     const employeeList = ['Rich', 'Zack', 'Lulu', 'Lauren', 'Brad', 'Chase', 'Matt'];
+    const QUESTIONS = [
+      "If you could have any superpower, what would it be?",
+      "What is the most interesting place you have ever visited?",
+      "What is your favorite childhood memory?",
+      "If you could meet any historical figure, who would it be?",
+      "What is the best piece of advice you have ever received?",
+      "If you were stranded on a deserted island, what three things would you want to have?",
+      "What is your favorite book or movie of all time?",
+      "If you could travel anywhere in the world, where would you go?",
+      "What is one thing you are really good at?",
+      "If you won the lottery, what is the first thing you would buy?",
+      "What is your dream job?",
+      "If you could only eat one food for the rest of your life, what would it be?",
+      "What is the most embarrassing thing that has ever happened to you?",
+      "If you could live in any era of history, when would it be?",
+      "What is your favorite way to spend a weekend?",
+      "What is one thing on your bucket list?",
+      "If you could talk to animals, which one would you talk to first?",
+      "What is your favorite hobby?",
+      "If you could be any fictional character, who would you be?",
+      "What is the best gift you have ever received?",
+      "What is your favorite holiday?",
+      "If you could master any skill instantly, what would it be?",
+      "What is the most adventurous thing you have ever done?",
+      "What is your favorite season of the year?",
+      "If you could invite three people to dinner, who would they be?",
+      "What is your favorite type of music?",
+      "If you could live anywhere in the universe, where would it be?",
+      "What is one thing you can't live without?",
+      "If you could witness any event in history, what would it be?",
+      "What is the most valuable lesson life has taught you?",
+      "What is your favorite thing about your job?",
+      "If you could be famous for one thing, what would it be?",
+      "What is your favorite restaurant?",
+      "If you could change one thing about the world, what would it be?",
+      "What is the best concert you have ever been to?",
+      "If you could have any animal as a pet, what would it be?",
+      "What is your favorite sport to watch or play?",
+      "If you could learn any language, what would it be?",
+      "What is the most interesting fact you know?",
+      "What is your favorite dessert?",
+      "If you could go back in time and give your younger self advice, what would it be?",
+      "What is the best movie you have seen recently?",
+      "If you could create a new holiday, what would it be called?",
+      "What is your favorite thing to do with friends?",
+      "If you could have dinner with your hero, who would it be?",
+      "What is the most unique talent you have?",
+      "If you could be an Olympic athlete, in what sport would you compete?",
+      "What is your favorite quote?",
+      "If you could design your own house, what would be the coolest feature?",
+      "What is the most important quality in a friend?"
+    ];
     let currentParticipant = "";
 
     function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -731,7 +784,12 @@
       await speak("I wouldn't have picked that, but you be you.", 2000);
       await speak("Let's see what you got!", 1000);
 
-      google.script.run.withSuccessHandler(revealFinal).showManualQuestion(parseInt(val, 10));
+      const num = parseInt(val, 10);
+      const res = {
+          number: num,
+          question: QUESTIONS[(num - 1) % QUESTIONS.length]
+      };
+      revealFinal(res);
     }
 
     async function chooseDOD() {
@@ -756,21 +814,26 @@
       theDie.classList.remove('rolling');
 
       // Fetch Result
-      google.script.run.withSuccessHandler(async (res) => {
-        // Update Die Face to result
-        theDie.style.transform = "rotateX(0) rotateY(0)";
-        document.querySelector('.f1').textContent = res.number;
-        playFanfare();
+      setTimeout(async () => {
+          const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
+          const res = {
+              number: num,
+              question: QUESTIONS[num - 1]
+          };
 
-        await wait(1000);
-        await speak(`Oh man, I was hoping for the Unicorn...`, 2000);
-        await speak(`But you got number ${res.number}.`, 1500);
-        await speak(`If it's a lame question, it's your fault!`, 2000);
+          // Update Die Face to result
+          theDie.style.transform = "rotateX(0) rotateY(0)";
+          document.querySelector('.f1').textContent = res.number;
+          playFanfare();
 
-        dieCont.classList.remove('active'); // Hide Die
-        revealFinal(res);
+          await wait(1000);
+          await speak(`Oh man, I was hoping for the Unicorn...`, 2000);
+          await speak(`But you got number ${res.number}.`, 1500);
+          await speak(`If it's a lame question, it's your fault!`, 2000);
 
-      }).pickRandomIcebreaker();
+          dieCont.classList.remove('active'); // Hide Die
+          revealFinal(res);
+      }, 500);
     }
 
     async function revealFinal(result) {
