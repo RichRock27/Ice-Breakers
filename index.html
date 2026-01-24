@@ -127,7 +127,7 @@
       bottom: -50px;
       left: 50%;
       width: 250px;
-      height: 350px;
+      height: 380px;
       transform: translateX(-50%) translateY(20px);
       transition: left 1.5s ease-in-out, transform 0.5s;
       z-index: 20;
@@ -137,7 +137,6 @@
     .host-img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
       filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
       animation: floatHost 3s ease-in-out infinite;
     }
@@ -162,13 +161,13 @@
     }
 
     .host-actor.hidden {
-      transform: translateX(-50%) translateY(400px);
+      transform: translateX(-50%) translateY(450px);
     }
 
     /* SPEECH BUBBLE */
     .bubble {
       position: absolute;
-      bottom: 320px;
+      bottom: 400px;
       left: 50%;
       transform: translateX(-50%) scale(0);
       background: #fff;
@@ -177,10 +176,10 @@
       border-radius: 30px;
       font-size: 20px;
       font-weight: 600;
-      max-width: 400px;
+      width: 300px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
       border: 2px solid var(--brand);
-      z-index: 25;
+      z-index: 50;
       transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       display: flex;
       align-items: center;
@@ -204,17 +203,6 @@
     }
 
     /* CONTROLS / INTERACTIVE UI */
-    .ui-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 30;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
     .btn {
       pointer-events: auto;
       cursor: pointer;
@@ -236,7 +224,6 @@
     .btn.visible {
       transform: scale(1);
       opacity: 1;
-      pointer-events: auto;
     }
 
     .btn:hover {
@@ -292,7 +279,7 @@
     }
 
     .die.rolling {
-      animation: rollDie 1s cubic-bezier(0.1, 0.7, 0.1, 1) infinite;
+      animation: rollDie 0.6s linear infinite;
     }
 
     .face {
@@ -341,28 +328,12 @@
         transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
       }
 
-      25% {
-        transform: rotateX(180deg) rotateY(90deg) rotateZ(45deg);
-      }
-
-      50% {
-        transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg);
-      }
-
-      75% {
-        transform: rotateX(540deg) rotateY(270deg) rotateZ(135deg);
-      }
-
       100% {
         transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg);
       }
     }
 
     /* QUESTION CARD */
-    .q-card {
-      padding: 40px;
-    }
-
     .q-num {
       font-size: 24px;
       color: var(--gold);
@@ -382,30 +353,23 @@
       line-height: 1.3;
     }
 
-    /* CHOICE PANEL */
-    .choice-panel {
+    /* CHOICE & CONFIRM PANELS */
+    .choice-panel,
+    .confirm-panel {
       display: none;
       flex-direction: column;
       align-items: center;
       gap: 20px;
     }
 
-    .choice-panel.active {
+    .choice-panel.active,
+    .confirm-panel.active {
       display: flex;
     }
 
     .input-wrapper {
       display: flex;
       gap: 10px;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: 0.5s;
-      pointer-events: auto;
-    }
-
-    .input-wrapper.show {
-      opacity: 1;
-      transform: translateY(0);
     }
 
     input.num-in {
@@ -429,19 +393,33 @@
       opacity: 0.7;
     }
 
-    /* DECOYFACES */
-    .face.decoy {
-      color: #8a2be2;
-      font-size: 40px;
+    /* ANNOUNCER CAPTIONS */
+    #announcerCaptions {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 10px 25px;
+      border-radius: 10px;
+      font-size: 24px;
+      font-weight: 500;
+      z-index: 100;
+      display: none;
+      max-width: 80%;
+      text-align: center;
+      border-bottom: 3px solid var(--gold);
+      pointer-events: none;
     }
   </style>
 </head>
 
 <body>
   <div class="sound-btn" onclick="toggleSound()">🔊</div>
+  <div id="announcerCaptions"></div>
 
   <div class="stage-container" id="stage">
-    <!-- CURTAINS -->
     <div class="curtain left" id="cLeft">
       <div class="curtain-logo">
         <h1 style="font-size: 60px; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.5);">PROPERTY</h1>
@@ -453,422 +431,420 @@
       </div>
     </div>
 
-    <!-- SCREEN (Behind Curtains) -->
     <div class="screen" id="screen">
       <div class="participant-big" id="partDisplay">?</div>
-
-      <!-- CHOICE PANEL -->
+      <div class="confirm-panel" id="confirmPanel">
+        <div style="font-size: 24px; color: #555; margin-bottom: 10px;">Are they present?</div>
+        <div style="display: flex; gap: 20px;">
+          <button class="btn visible" style="background: #28a745;" onclick="confirmPresence(true)">✅
+            YES</button>
+          <button class="btn visible" style="background: #dc3545;" onclick="confirmPresence(false)">❌
+            NO</button>
+        </div>
+      </div>
       <div class="choice-panel" id="choicePanel">
-        <button class="btn btn-dod" id="btnDod" onclick="chooseDOD()">
-          <span>🎲</span> DIE OF DESTINY
-        </button>
-
+        <button class="btn btn-dod" id="btnDod" onclick="chooseDOD()"><span>🎲</span> DIE OF DESTINY</button>
         <div style="color:#aaa; margin: 10px;">— OR —</div>
-
-        <div class="input-wrapper show">
-          <input type="number" id="manualNum" class="num-in" placeholder="#" min="1" max="200">
-          <button class="btn" style="transform:scale(1); opacity:1; padding: 10px 20px; margin:0;"
+        <div class="input-wrapper">
+          <input type="number" id="manualNum" class="num-in" placeholder="#" min="1" max="212">
+          <button class="btn" style="transform:scale(1); opacity:1; padding: 10px 20px;"
             onclick="chooseManual()">GO</button>
         </div>
       </div>
-
-      <!-- DIE -->
       <div class="die-container" id="dieCont">
         <div class="die" id="theDie">
           <div class="face f1">?</div>
-          <div class="face f2 decoy">💩</div>
+          <div class="face f2">💩</div>
           <div class="face f3">12</div>
-          <div class="face f4 decoy">🔥</div>
+          <div class="face f4">🔥</div>
           <div class="face f5">88</div>
-          <div class="face f6 decoy">🦄</div>
+          <div class="face f6">🦄</div>
         </div>
       </div>
-
-      <!-- FINAL QUESTION -->
       <div class="q-card" id="finalQ" style="display:none;">
         <div class="q-num" id="qNumBadge">#--</div>
         <div class="q-text" id="qTextView"></div>
-        <button class="btn visible" onclick="resetGame()">Start Over 🔄</button>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button class="btn visible" onclick="resetGame()">Start Over 🔄</button>
+          <button class="btn visible" style="background: #6c757d;" onclick="rerollQuestion()">New Question
+            🎲</button>
+        </div>
       </div>
     </div>
 
-    <!-- HOST & BUBBLE -->
-    <div class="bubble" id="bubble"></div>
     <div class="host-actor hidden" id="host">
-      <!-- SVG Placeholder for Host (Rich's Description) -->
-      <svg class="host-img" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
-        <!-- Body -->
-        <path d="M50 140 Q 100 320 150 140 L 140 300 L 60 300 Z" fill="#dd8800" />
-        <!-- Floral Shirt Pattern -->
-        <circle cx="80" cy="180" r="10" fill="#cc5500" opacity="0.6" />
-        <circle cx="120" cy="220" r="12" fill="#552200" opacity="0.6" />
-        <path d="M50 140 C 30 140, 20 200, 30 250" stroke="black" stroke-width="2" fill="none" />
-        <path d="M150 140 C 170 140, 180 200, 170 250" stroke="black" stroke-width="2" fill="none" />
-        <!-- Head -->
-        <ellipse cx="100" cy="90" rx="45" ry="55" fill="#8d5524" /> <!-- Caramel Skin -->
-        <!-- Beard/Goatee -->
-        <path d="M85 130 Q 100 160 115 130 L 100 135 Z" fill="#111" />
-        <rect x="58" y="80" width="10" height="30" fill="#111" /> <!-- Sideburn L -->
-        <rect x="132" y="80" width="10" height="30" fill="#111" /> <!-- Sideburn R -->
-        <!-- Glasses -->
-        <g fill="none" stroke="#4a3c31" stroke-width="4">
-          <circle cx="82" cy="85" r="14" />
-          <circle cx="118" cy="85" r="14" />
-          <line x1="96" y1="85" x2="104" y2="85" />
+      <div class="bubble" id="bubble"></div>
+      <svg class="host-img" viewBox="0 0 300 450" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8d5524" />
+            <stop offset="100%" stop-color="#6d3e17" />
+          </linearGradient>
+          <linearGradient id="suitGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2c3e50" />
+            <stop offset="100%" stop-color="#1a252f" />
+          </linearGradient>
+        </defs>
+        <path d="M120 180 L 120 230 L 180 230 L 180 180" fill="url(#skin)" />
+        <path d="M120 230 Q 150 245 180 230" fill="rgba(0,0,0,0.2)" />
+        <path d="M150 230 L 120 230 L 150 450 L 180 230 Z" fill="#ffffff" />
+        <path d="M150 230 L 140 245 L 140 340 L 150 355 L 160 340 L 160 245 Z" fill="#c0392b" />
+        <path d="M60 230 Q 150 215 240 230 L 260 450 L 180 450 L 150 300 L 120 450 L 40 450 Z" fill="url(#suitGrad)" />
+        <path d="M120 230 L 150 310 L 90 280 Z" fill="#1c2833" stroke="#111" stroke-width="0.5" />
+        <path d="M180 230 L 150 310 L 210 280 Z" fill="#1c2833" stroke="#111" stroke-width="0.5" />
+        <g transform="translate(150, 140)">
+          <ellipse cx="0" cy="0" rx="55" ry="70" fill="url(#skin)" />
+          <ellipse cx="-55" cy="0" rx="10" ry="15" fill="url(#skin)" />
+          <ellipse cx="55" cy="0" rx="10" ry="15" fill="url(#skin)" />
+          <path d="M-20 60 Q 0 85 20 60 L 15 45 Q 0 55 -15 45 Z" fill="#222" />
+          <path d="M-20 35 Q 0 45 20 35" stroke="#3e1e0c" stroke-width="3" fill="none" stroke-linecap="round" />
+          <path d="M-8 10 Q 0 25 8 20" stroke="#5a2d0c" stroke-width="3" fill="none" />
+          <path d="M-15 -10 Q 0 -15 15 -10" stroke="#333" stroke-width="2" />
+          <circle cx="-30" cy="-5" r="16" stroke="#444" stroke-width="2" fill="rgba(255,255,255,0.2)" />
+          <circle cx="30" cy="-5" r="16" stroke="#444" stroke-width="2" fill="rgba(255,255,255,0.2)" />
+          <circle cx="-30" cy="-5" r="4" fill="#111" />
+          <circle cx="30" cy="-5" r="4" fill="#111" />
+          <path d="M-45 -25 Q -30 -35 -15 -25" stroke="#222" stroke-width="4" fill="none" />
+          <path d="M15 -25 Q 30 -35 45 -25" stroke="#222" stroke-width="4" fill="none" />
         </g>
-        <!-- Eyes/Mouth -->
-        <circle cx="82" cy="85" r="3" fill="black" />
-        <circle cx="118" cy="85" r="3" fill="black" />
-        <path d="M 85 115 Q 100 125 115 115" stroke="black" stroke-width="2" fill="none" />
       </svg>
     </div>
 
-    <!-- Intro Button -->
-    <div class="ui-layer">
-      <button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
+    <div class="ui-layer"><button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
     </div>
   </div>
 
   <script>
-    // === SOUND ENGINE ===
-    let audioCtx = null;
-    let soundOn = true;
-    let announcerVoice = null;
+    const QUESTIONS = [
+      "If you could have dinner with any historical figure, who would it be?",
+      "What is the most useless talent you have?",
+      "If you were a wrestler, what would your entrance theme song be?",
+      "What was your favorite cartoon growing up?",
+      "If you could instantly learn any language, which one would it be?",
+      "What is the weirdest food you have ever eaten?",
+      "If you could teleport anywhere right now, where would you go?",
+      "What is your 'guilty pleasure' song?",
+      "If you could have any animal as a domesticated pet, what would you choose?",
+      "What is the best piece of advice you've ever received?",
+      "If you had to eat one meal for the rest of your life, what would it be?",
+      "What is your favorite holiday and why?",
+      "If you were a superhero, what would your power be?",
+      "What is the last book you read?",
+      "Who is your favorite fictional character?",
+      "If you won the lottery today, what is the first thing you would buy?",
+      "What is the most adventurous thing you've ever done?",
+      "If you could live in any TV show universe, which one would it be?",
+      "What is your favorite board game?",
+      "If you could switch lives with anyone for a day, who would it be?",
+      "What is the funniest joke you know by heart?",
+      "If you were stranded on a deserted island, what three items would you want?",
+      "What is your favorite season?",
+      "If you could only watch one movie forever, what would it be?",
+      "What is your favorite dessert?",
+      "If you were famous, what would you be famous for?",
+      "What is the most embarrassing fashion trend you followed?",
+      "If you could have a conversation with your younger self, what would it say?",
+      "What is your favorite way to spend a weekend?",
+      "If you could time travel, would you go to the past or the future?",
+      "What is the best gift you have ever received?",
+      "If you could own a fictional vehicle (Batmobile, DeLorean, etc.), which one?",
+      "What is your go-to karaoke song?",
+      "If you could have an unlimited supply of one thing, what would it be?",
+      "What is your favorite childhood memory?",
+      "If you could bring back any cancelled TV show, which one?",
+      "What is your favorite smell?",
+      "If you could be an Olympic athlete, what sport would you compete in?",
+      "What is the most interesting documentary you've watched?",
+      "If you had a warning label, what would it say?",
+      "What is your favorite breakfast food?",
+      "If you could meet any celebrity, who would it be?",
+      "What is the scariest movie you've ever seen?",
+      "If you could learn any instrument, what would it be?",
+      "What is your dream car?",
+      "If you could act in any movie genre, which would you pick?",
+      "What is the best concert you've ever been to?",
+      "If you could have any job in the world, what would it be?",
+      "What is your favorite app on your phone?",
+      "If you were a ghost, who would you haunt?",
+      "What is the most spontaneous thing you've ever done?",
+      "What was your first job?",
+      "If you could live anywhere in the world, where would it be?",
+      "What is your favorite ice cream flavor?",
+      "Do you have any phobias?",
+      "What is a skill you'd like to learn in the next year?",
+      "If you could be capturing any moment in history on camera, what would it be?",
+      "What is the best compliment you've ever received?",
+      "What is your favorite family tradition?",
+      "If you could eliminate one thing from your daily routine, what would it be?",
+      "What is your favorite thing about your current job?",
+      "If you could have a superpower but it had to be mundane (e.g., always finding a parking spot), what would it be?",
+      "What is the most interesting place you’ve visited?",
+      "If you could play any sport professionally, what would it be?",
+      "What is your favorite type of cuisine?",
+      "If you could have a personal chef, cleaner, or chauffeur, which would you pick?",
+      "What is the best movie ending of all time?",
+      "If you were a video game character, what would your stats be?",
+      "What is your favorite quote?",
+      "If you could see any band (dead or alive) in concert, who would it be?",
+      "What is your favorite thing to do on a rainy day?",
+      "If you were forced to participate in a reality TV show, which one would you choose?",
+      "What is a small act of kindness you were shown that you'll never forget?",
+      "If you could design a planet, what would it look like?",
+      "What is your favorite sandwich?",
+      "If you could be any age for a week, what age would you be?",
+      "What is the most interesting fact you know?",
+      "If you could have a robot do one chore for you, what would it be?",
+      "What is your favorite way to relax?",
+      "If you could write a book, what genre would it be?",
+      "What is the best purchase you've made this year?",
+      "If you could be a master of any martial art, which one would you choose?",
+      "What is your favorite smell in nature?",
+      "If you could have a secret hideout, where would it be?",
+      "What is your favorite accent?",
+      "If you could be any fictional villain, who would you be?",
+      "What is the most impressive thing you can cook?",
+      "If you could change your name, what would you change it to?",
+      "What is your favorite board game to play with friends?",
+      "If you could have any view from your window, what would it be?",
+      "What is the funniest thing that has caught you off guard?",
+      "If you could be an expert in any field of science, what would it be?",
+      "What is your favorite animated movie?",
+      "If you could have a museum dedicated to you, what would be in it?",
+      "What is your favorite classic rock song?",
+      "If you could be a contestant on any game show, which one would you choose?",
+      "What is the most beautiful place you've ever seen?",
+      "If you could have a lifetime supply of any beverage, what would it be?",
+      "What is your favorite thing about yourself?",
+      "If you could be a character in Star Wars, who would you be?",
+      "What is the best prank you've ever pulled or had pulled on you?",
+      "If you could lock one person in a room with a hungry lion, who... just kidding. Who is your hero?",
+      "What is your favorite emoji?",
+      "If you could be a fly on the wall in any room in the world, where would you be?",
+      "What is the most memorable dream you've ever had?",
+      "If you could have any car from history, what would it be?",
+      "What is your favorite dipping sauce?",
+      "If you could be famous for one thing, what would you want it to be (other than your job)?",
+      "What is the most unusual pet you've ever seen?",
+      "If you could have a theme park based on your life, what would the main ride be?",
+      "What is your favorite word?",
+      "If you could be fluent in every language, how would you use that skill?",
+      "What is the most breathtaking natural wonder you've seen?",
+      "If you could have a personal assistant for one task, what would it be?",
+      "What is your favorite video game of all time?",
+      "If you could be a pirate or a ninja, which would you choose?",
+      "What is the best piece of advice you would give to your 18-year-old self?",
+      "If you could have a dinner party with three fictional characters, who would they be?",
+      "What is your favorite type of cheese?",
+      "If you could be the CEO of any company, which one would it be?",
+      "What is the most unique souvenir you've ever bought?",
+      "If you could have a magic pocket that always produced one specific item, what would it be?",
+      "What is your favorite fast food restaurant?",
+      "If you could be a professional gamer, what game would you play?",
+      "What is the most interesting thing you've learned recently?",
+      "If you could have a statue made of you, what pose would you be in?",
+      "What is your favorite type of weather?",
+      "If you could be a cartoon character, who would you be?",
+      "What is the best compliment you've given someone?",
+      "If you could have a limitless budget for one hobby, what would it be?",
+      "What is your favorite song to dance to?",
+      "If you could be a detective in any fictional universe, where would you want to solve crimes?",
+      "What is the most nostalgic smell for you?",
+      "If you could have a personal soundtrack play when you enter a room, what song would it be?",
+      "What is your favorite type of pizza?",
+      "If you could be a teacher, what subject would you teach?",
+      "What is the most awe-inspiring thing you've ever seen?",
+      "If you could have a conversation with an alien, what would you ask them?",
+      "What is your favorite type of cookie?",
+      "If you could be a classic movie star, who would you be?",
+      "What is the most ridiculous thing you've ever bought?",
+      "If you could have a treehouse, what would it look like?",
+      "What is your favorite type of chocolate?",
+      "If you could be a character in Harry Potter, which house would you be in?",
+      "What is the best way to spend a rainy Sunday?",
+      "If you could have a robot butler, what would you name it?",
+      "What is your favorite type of flower?",
+      "If you could be a master of any musical instrument, what would it be?",
+      "What is the most interesting historical fact you know?",
+      "If you could have a personalized license plate, what would it say?",
+      "What is your favorite type of shoe?",
+      "If you could be a character in a fantasy novel, what race (elf, dwarf, etc.) would you be?",
+      "What is the best way to start the day?",
+      "If you could have a secret talent, what would it be?",
+      "What is your favorite type of tea or coffee?",
+      "If you could be a racing driver, what kind of car would you race?",
+      "What is the most memorable meal you've ever had?",
+      "If you could have a personal library, what kind of books would fill it?",
+      "What is your favorite type of pasta?",
+      "If you could be a character in a sci-fi movie, who would you be?",
+      "What is the best way to de-stress?",
+      "If you could have a garden full of any plant, what would it be?",
+      "What is your favorite type of cake?",
+      "If you could be a legend in any sport, which one would it be?",
+      "What is the most beautiful city you've ever visited?",
+      "If you could have a pet dragon, what would you name it?",
+      "What is your favorite type of soup?",
+      "If you could be a character in a horror movie, would you be the hero or the villain?",
+      "What is the best piece of technology you own?",
+      "If you could have a superpower that only worked on weekends, what would it be?",
+      "What is your favorite type of bread?",
+      "If you could be a character in a western movie, who would you be?",
+      "What is the most relaxing place you've ever been?",
+      "If you could have a personal spaceship, where would you go first?",
+      "What is your favorite type of fruit?",
+      "If you could be a character in a musical, which one would you choose?",
+      "What is the best way to spend a Friday night?",
+      "If you could have a secret underground lair, what would be inside?",
+      "What is your favorite type of mood?",
+      "If you could be a character in a comedy movie, who would you be?",
+      "What is the most interesting job you've ever heard of?",
+      "If you could have a personal island, what would you name it?",
+      "What is your favorite type of candy?",
+      "If you could be a character in a mystery novel, who would you be?",
+      "What is the best way to end the day?",
+      "If you could have a personal submarine, where would you explore?",
+      "What is your favorite type of nut?",
+      "If you could be a character in a romance movie, who would you be?",
+      "What is the most inspiring story you've ever heard?",
+      "If you could have a personal jet, where would you fly?",
+      "What is your favorite type of vegetable?",
+      "If you could be a character in an action movie, who would you be?",
+      "What is the best way to celebrate a birthday?",
+      "If you could have a personal time machine, when would you visit?",
+      "What is your favorite type of meat?",
+      "If you could be a character in a drama movie, who would you be?",
+      "What is the most exciting thing you've ever done?",
+      "If you could have a personal teleporter, where would you go?",
+      "What is your favorite type of fish?",
+      "If you could be a character in a thriller movie, who would you be?",
+      "What is the best way to spend a vacation?",
+      "If you could have a personal cloning machine, what would you clone?",
+      "What is your favorite type of bird?",
+      "If you could be a character in a documentary, who would you be?",
+      "What is the most fascinating animal you know?",
+      "If you could have a personal invisibility cloak, what would you do?",
+      "What is your favorite type of insect?",
+      "If you could be a character in a short story, who would you be?",
+      "What is the best way to spend a holiday?",
+      "If you could have a personal robot army, what would you do?",
+      "What is your favorite type of reptile?"
+    ];
 
-    function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        // Load voices
-        const voices = window.speechSynthesis.getVoices();
-        announcerVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Male')) || voices[0];
+    const script = {
+      locations: ["Lyve from Burbank Studios!", "Coming to you lyve from the office!"],
+      intros: ["Welcome team! It's showtime!", "Get ready to break the ice!"],
+      hostNames: ["Richie 'The Closer' Green", "Marsha Mellow", "Chip Munk", "Neil Down", "Paige Turner"],
+      greetings: ["Thank you! You're too kind!", "Wow! What a crowd!", "Let's get this party started!"],
+      presenceChecks: ["Is ${name} actually here?", "Paging ${name}! Are you out there?", "Is ${name} in the house?"],
+      choicePrompts: ["Choose your destiny!", "The power is in your hands!", "Pick a number or roll the die!"],
+      absentReactions: ["Ghosting me? Fine! Next!", "Not here? Scandalous!", "Moving on..."],
+      rerollComments: ["Too tough? Let's spin it again!", "Switching it up!", "No problem, let's find another one!"]
+    };
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    let audioCtx = null, soundOn = true, announcerVoice = null, voicesLoaded = false;
+    let usedParticipants = [], currentParticipant = "";
+    const employeeList = ['Rich', 'Zack', 'Lulu', 'Lauren', 'Brad', 'Chase', 'Matt'];
+
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const filtered = voices.filter(v => !['Fred', 'Cellos', 'Organ', 'Bells', 'Good News', 'Bad News', 'Pipe Organ', 'Zarvox', 'Trinoids', 'Boing', 'Whisper', 'Albert', 'Hysterical', 'Bubbles'].some(bad => v.name.includes(bad)));
+        announcerVoice = filtered.find(v => v.name.includes('Siri')) || filtered.find(v => v.name.includes('Daniel')) || filtered.find(v => v.name.includes('Alex')) || filtered[0];
+        voicesLoaded = true;
       }
     }
-
+    async function initAudio() {
+      if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+    }
     function toggleSound() { soundOn = !soundOn; document.querySelector('.sound-btn').style.opacity = soundOn ? 1 : 0.3; }
-
     function playTone(freq, type, duration, vol = 0.1) {
       if (!soundOn || !audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type; osc.frequency.value = freq;
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start();
-      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.stop(audioCtx.currentTime + duration);
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = type; osc.frequency.value = freq; osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration); osc.stop(audioCtx.currentTime + duration);
     }
-
-    function playNoise(duration) {
-      if (!soundOn || !audioCtx) return;
-      const bufferSize = audioCtx.sampleRate * duration;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buffer;
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      noise.connect(gain);
-      gain.connect(audioCtx.destination);
-      noise.start();
-    }
-
-    function playJingle() {
-      if (!soundOn) return; initAudio();
-      // Simple major scale climb "Da-da-da-DAAA!"
-      let time = 0;
-      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-        setTimeout(() => playTone(f, 'square', 0.2, 0.1), i * 150);
-      });
-      setTimeout(() => playTone(880, 'sine', 0.4, 0.1), 600); // Harmony
-    }
-
-    function playApplause() {
-      if (!soundOn) return;
-      // Burst of noise claps
-      for (let i = 0; i < 15; i++) {
-        setTimeout(() => playNoise(0.2 + Math.random() * 0.3), i * 100);
-      }
-    }
-
-    function playRollSound() {
-      if (!soundOn) return; initAudio();
-      let count = 0;
-      const roll = setInterval(() => {
-        playTone(200 + Math.random() * 200, 'square', 0.05);
-        count++; if (count > 15) clearInterval(roll);
-      }, 80);
-    }
-
-    function playSpeechSound() {
-      if (!soundOn) return; initAudio();
-      playTone(300 + Math.random() * 100, 'sine', 0.05);
-    }
-
-    // === TEXT TO SPEECH ANNOUNCER ===
-    function announcerSay(text) {
-      if (!soundOn) return new Promise(r => setTimeout(r, 2000));
+    function playSpeechSound() { if (soundOn && audioCtx) playTone(400 + Math.random() * 150, 'sine', 0.05, 0.08); }
+    async function announcerSay(text) {
+      const cap = document.getElementById('announcerCaptions');
+      cap.textContent = text.replace(/Lyve/g, 'Live'); cap.style.display = 'block';
+      if (!soundOn) return new Promise(r => setTimeout(r, 2000)).then(() => cap.style.display = 'none');
       return new Promise(resolve => {
         const u = new SpeechSynthesisUtterance(text);
         if (announcerVoice) u.voice = announcerVoice;
-        u.rate = 1.1;
-        u.pitch = 0.9;
-        u.volume = 1;
-        u.onend = resolve;
+        u.rate = 0.82; u.pitch = 1.0;
+        u.onend = () => { cap.style.display = 'none'; resolve(); };
         window.speechSynthesis.speak(u);
       });
     }
-
-    // === ACTOR SYSTEM ===
-    const host = document.getElementById('host');
-    const bubble = document.getElementById('bubble');
-
-    function moveHost(posClass) {
-      host.className = 'host-actor ' + posClass;
-    }
-
+    const host = document.getElementById('host'), bubble = document.getElementById('bubble');
+    function moveHost(pos) { host.className = 'host-actor ' + pos; }
     async function speak(text, duration = 2000) {
-      bubble.textContent = '';
-      bubble.classList.add('show');
-      const chars = text.split('');
-      for (let c of chars) {
-        bubble.textContent += c;
-        if (c !== ' ') playSpeechSound();
-        await wait(70);
-      }
-      await wait(duration);
-      bubble.classList.remove('show');
+      bubble.textContent = ''; bubble.classList.add('show');
+      const words = text.split('');
+      for (let c of words) { bubble.textContent += c; if (c !== ' ') playSpeechSound(); await new Promise(r => setTimeout(r, 50)); }
+      await new Promise(r => setTimeout(r, duration)); bubble.classList.remove('show');
     }
-
-    // === GAME STATE ===
-    const employeeList = ['Rich', 'Zack', 'Lulu', 'Lauren', 'Brad', 'Chase', 'Matt'];
-    const QUESTIONS = [
-      "If you could have any superpower, what would it be?",
-      "What is the most interesting place you have ever visited?",
-      "What is your favorite childhood memory?",
-      "If you could meet any historical figure, who would it be?",
-      "What is the best piece of advice you have ever received?",
-      "If you were stranded on a deserted island, what three things would you want to have?",
-      "What is your favorite book or movie of all time?",
-      "If you could travel anywhere in the world, where would you go?",
-      "What is one thing you are really good at?",
-      "If you won the lottery, what is the first thing you would buy?",
-      "What is your dream job?",
-      "If you could only eat one food for the rest of your life, what would it be?",
-      "What is the most embarrassing thing that has ever happened to you?",
-      "If you could live in any era of history, when would it be?",
-      "What is your favorite way to spend a weekend?",
-      "What is one thing on your bucket list?",
-      "If you could talk to animals, which one would you talk to first?",
-      "What is your favorite hobby?",
-      "If you could be any fictional character, who would you be?",
-      "What is the best gift you have ever received?",
-      "What is your favorite holiday?",
-      "If you could master any skill instantly, what would it be?",
-      "What is the most adventurous thing you have ever done?",
-      "What is your favorite season of the year?",
-      "If you could invite three people to dinner, who would they be?",
-      "What is your favorite type of music?",
-      "If you could live anywhere in the universe, where would it be?",
-      "What is one thing you can't live without?",
-      "If you could witness any event in history, what would it be?",
-      "What is the most valuable lesson life has taught you?",
-      "What is your favorite thing about your job?",
-      "If you could be famous for one thing, what would it be?",
-      "What is your favorite restaurant?",
-      "If you could change one thing about the world, what would it be?",
-      "What is the best concert you have ever been to?",
-      "If you could have any animal as a pet, what would it be?",
-      "What is your favorite sport to watch or play?",
-      "If you could learn any language, what would it be?",
-      "What is the most interesting fact you know?",
-      "What is your favorite dessert?",
-      "If you could go back in time and give your younger self advice, what would it be?",
-      "What is the best movie you have seen recently?",
-      "If you could create a new holiday, what would it be called?",
-      "What is your favorite thing to do with friends?",
-      "If you could have dinner with your hero, who would it be?",
-      "What is the most unique talent you have?",
-      "If you could be an Olympic athlete, in what sport would you compete?",
-      "What is your favorite quote?",
-      "If you could design your own house, what would be the coolest feature?",
-      "What is the most important quality in a friend?"
-    ];
-    let currentParticipant = "";
-
-    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
     async function startShow() {
-      initAudio();
-      const btn = document.getElementById('startBtn');
-      btn.style.opacity = '0';
-      await wait(300);
-      btn.style.display = 'none';
-
-      // ANNOUNCER INTRO
-      playJingle();
-      await wait(1000);
-
-      // Voice + Subtitles? We'll just use voice and wait
-      await announcerSay("Ladies and Gentlemen... thank you for joining us for another exciting edition of Ice Breakers!");
-      await wait(500);
-
-      await announcerSay("And here is your host...");
-      await wait(800);
-      await announcerSay("Richie 'The Closer' Green!");
-
-      // ACT 1: Host Enters
-      moveHost('pos-center');
-      playApplause();
-      await wait(2000); // Soak in applause
-
-      await speak("Thank you! Thank you!", 1500);
-      await speak("Let's see who our lucky participant is today...", 1500);
-
-      // Indicate curtain
-      moveHost('pos-left');
-      await wait(1000);
-
-      // ACT 2: Reveal Participant
-      document.getElementById('stage').classList.add('stage-open');
-      playJingle(); // Mini fanfare
-      await shuffleParticipant();
-
-      // ACT 3: The Choice
-      moveHost('pos-right');
-      await wait(500);
-      await speak(`Alright ${currentParticipant}, it's your big day!`, 2000);
-      await speak("You are Top Dog!", 1500);
-      await speak("Choose a number... OR roll the Die of Destiny!", 2000);
-
-      // Show Controls
-      document.getElementById('choicePanel').classList.add('active');
-      document.getElementById('btnDod').classList.add('visible');
+      await initAudio(); document.getElementById('startBtn').style.display = 'none';
+      await announcerSay(getRandom(script.locations));
+      await announcerSay(getRandom(script.intros));
+      await announcerSay("And here is your host... " + getRandom(script.hostNames) + "!");
+      moveHost('pos-center'); await new Promise(r => setTimeout(r, 1000));
+      await speak(getRandom(script.greetings));
+      moveHost('pos-left'); document.getElementById('stage').classList.add('stage-open');
+      shuffleParticipant();
     }
-
     async function shuffleParticipant() {
-      const pDisp = document.getElementById('partDisplay');
-      pDisp.classList.add('show');
-
-      // Slower shuffle (~50% speed)
-      for (let i = 0; i < 15; i++) {
-        pDisp.textContent = employeeList[Math.floor(Math.random() * employeeList.length)];
-        playTone(800, 'sine', 0.05);
-        await wait(150 + (i * 30)); // Getting slower
-      }
-
-      currentParticipant = employeeList[Math.floor(Math.random() * employeeList.length)];
-      pDisp.textContent = currentParticipant;
-      pDisp.style.color = '#e23a2b';
-      pDisp.style.transform = "scale(1.2)";
-      playFanfare();
-
-      // Confetti
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-      await wait(1000);
+      const disp = document.getElementById('partDisplay');
+      disp.style.display = 'block';
+      disp.classList.add('show');
+      let available = employeeList.filter(e => !usedParticipants.includes(e));
+      if (available.length === 0) { usedParticipants = []; available = employeeList; }
+      currentParticipant = available[Math.floor(Math.random() * available.length)];
+      usedParticipants.push(currentParticipant); disp.textContent = currentParticipant;
+      await new Promise(r => setTimeout(r, 1000));
+      askPresence();
     }
-
-    // === CHOICE HANDLERS ===
-
-    async function chooseManual() {
+    async function askPresence() { moveHost('pos-center'); await speak(getRandom(script.presenceChecks).replace('${name}', currentParticipant)); document.getElementById('confirmPanel').classList.add('active'); }
+    function confirmPresence(isHere) {
+      document.getElementById('confirmPanel').classList.remove('active');
+      if (isHere) { moveHost('pos-right'); document.getElementById('choicePanel').classList.add('active'); }
+      else { shuffleParticipant(); }
+    }
+    function chooseManual() {
       const val = document.getElementById('manualNum').value;
       if (!val) return;
-
-      // Hide controls
       document.getElementById('choicePanel').classList.remove('active');
-
-      await speak(`You chose number ${val}...`, 1500);
-      await speak("I wouldn't have picked that, but you be you.", 2000);
-      await speak("Let's see what you got!", 1000);
-
       const num = parseInt(val, 10);
-      const res = {
-          number: num,
-          question: QUESTIONS[(num - 1) % QUESTIONS.length]
-      };
+      const res = { number: num, question: QUESTIONS[(num - 1) % QUESTIONS.length] };
       revealFinal(res);
     }
-
-    async function chooseDOD() {
+    function chooseDOD() {
       document.getElementById('choicePanel').classList.remove('active');
-      moveHost('pos-center');
-
-      // ACT 4: The Roll
-      await speak("You went with the Die of Destiny!", 1500);
-      await speak("Like the rock said to the hill... Let's ROLL!", 1500);
-
-      // Show Die
-      const dieCont = document.getElementById('dieCont');
-      const theDie = document.getElementById('theDie');
-      document.getElementById('partDisplay').style.display = 'none'; // Hide name temporarily
-      dieCont.classList.add('active');
-      theDie.classList.add('rolling');
-      playRollSound();
-
-      await wait(2500); // Rolling time
-
-      // Stop Roll
-      theDie.classList.remove('rolling');
-
-      // Fetch Result
-      setTimeout(async () => {
-          const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
-          const res = {
-              number: num,
-              question: QUESTIONS[num - 1]
-          };
-
-          // Update Die Face to result
-          theDie.style.transform = "rotateX(0) rotateY(0)";
-          document.querySelector('.f1').textContent = res.number;
-          playFanfare();
-
-          await wait(1000);
-          await speak(`Oh man, I was hoping for the Unicorn...`, 2000);
-          await speak(`But you got number ${res.number}.`, 1500);
-          await speak(`If it's a lame question, it's your fault!`, 2000);
-
-          dieCont.classList.remove('active'); // Hide Die
-          revealFinal(res);
-      }, 500);
+      document.getElementById('dieCont').classList.add('active');
+      document.getElementById('theDie').classList.add('rolling');
+      setTimeout(() => {
+        document.getElementById('theDie').classList.remove('rolling');
+        document.getElementById('dieCont').classList.remove('active');
+        const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
+        const res = { number: num, question: QUESTIONS[num - 1] };
+        revealFinal(res);
+      }, 3000);
     }
-
-    async function revealFinal(result) {
-      moveHost('pos-left'); // Get out of way
-
-      const qCard = document.getElementById('finalQ');
-      const qBadge = document.getElementById('qNumBadge');
-      const qText = document.getElementById('qTextView');
-
+    function revealFinal(res) {
       document.getElementById('partDisplay').style.display = 'none';
-      qCard.style.display = 'block';
-
-      qBadge.textContent = "#" + result.number;
-
-      // Typewriter Question
-      qText.textContent = "";
-      const words = result.question.split(" ");
-      for (let w of words) {
-        if (w) qText.textContent += w + " ";
-        await wait(50);
-      }
-
-      confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
-      await wait(2000);
-      moveHost('pos-center');
-      await speak("Thank you! See you next week!", 3000);
+      document.getElementById('screen').classList.add('stage-open');
+      document.getElementById('finalQ').style.display = 'block';
+      document.getElementById('qNumBadge').textContent = "#" + res.number;
+      document.getElementById('qTextView').textContent = res.question;
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     }
-
-    function resetGame() {
-      // Soft reset
-      document.getElementById('finalQ').style.display = 'none';
-      document.getElementById('stage').classList.remove('stage-open');
-      moveHost('hidden');
-      document.getElementById('startBtn').style.display = 'block';
-      document.getElementById('startBtn').style.opacity = '1';
+    function resetGame() { location.reload(); }
+    function rerollQuestion() {
+      const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
+      const res = { number: num, question: QUESTIONS[num - 1] };
+      revealFinal(res);
     }
   </script>
 </body>
