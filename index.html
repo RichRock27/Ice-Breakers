@@ -203,6 +203,18 @@
     }
 
     /* CONTROLS / INTERACTIVE UI */
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      /* FORCE ABOVE EVERYTHING */
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
     .btn {
       pointer-events: auto;
       cursor: pointer;
@@ -328,12 +340,28 @@
         transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
       }
 
+      25% {
+        transform: rotateX(180deg) rotateY(90deg) rotateZ(45deg);
+      }
+
+      50% {
+        transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg);
+      }
+
+      75% {
+        transform: rotateX(540deg) rotateY(270deg) rotateZ(135deg);
+      }
+
       100% {
         transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg);
       }
     }
 
     /* QUESTION CARD */
+    .q-card {
+      padding: 40px;
+    }
+
     .q-num {
       font-size: 24px;
       color: var(--gold);
@@ -370,6 +398,15 @@
     .input-wrapper {
       display: flex;
       gap: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: 0.5s;
+      pointer-events: auto;
+    }
+
+    .input-wrapper.show {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     input.num-in {
@@ -391,6 +428,12 @@
       cursor: pointer;
       filter: drop-shadow(0 2px 4px #000);
       opacity: 0.7;
+    }
+
+    /* DECOYFACES */
+    .face.decoy {
+      color: #8a2be2;
+      font-size: 40px;
     }
 
     /* ANNOUNCER CAPTIONS */
@@ -420,6 +463,7 @@
   <div id="announcerCaptions"></div>
 
   <div class="stage-container" id="stage">
+    <!-- CURTAINS -->
     <div class="curtain left" id="cLeft">
       <div class="curtain-logo">
         <h1 style="font-size: 60px; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.5);">PROPERTY</h1>
@@ -431,8 +475,11 @@
       </div>
     </div>
 
+    <!-- SCREEN (Behind Curtains) -->
     <div class="screen" id="screen">
       <div class="participant-big" id="partDisplay">?</div>
+
+      <!-- CONFIRM PANEL -->
       <div class="confirm-panel" id="confirmPanel">
         <div style="font-size: 24px; color: #555; margin-bottom: 10px;">Are they present?</div>
         <div style="display: flex; gap: 20px;">
@@ -442,25 +489,35 @@
             NO</button>
         </div>
       </div>
+
+      <!-- CHOICE PANEL -->
       <div class="choice-panel" id="choicePanel">
-        <button class="btn btn-dod" id="btnDod" onclick="chooseDOD()"><span>🎲</span> DIE OF DESTINY</button>
+        <button class="btn btn-dod" id="btnDod" onclick="chooseDOD()">
+          <span>🎲</span> DIE OF DESTINY
+        </button>
+
         <div style="color:#aaa; margin: 10px;">— OR —</div>
-        <div class="input-wrapper">
+
+        <div class="input-wrapper show">
           <input type="number" id="manualNum" class="num-in" placeholder="#" min="1" max="212">
-          <button class="btn" style="transform:scale(1); opacity:1; padding: 10px 20px;"
+          <button class="btn" style="transform:scale(1); opacity:1; padding: 10px 20px; margin:0;"
             onclick="chooseManual()">GO</button>
         </div>
       </div>
+
+      <!-- DIE -->
       <div class="die-container" id="dieCont">
         <div class="die" id="theDie">
           <div class="face f1">?</div>
-          <div class="face f2">💩</div>
+          <div class="face f2 decoy">💩</div>
           <div class="face f3">12</div>
-          <div class="face f4">🔥</div>
+          <div class="face f4 decoy">🔥</div>
           <div class="face f5">88</div>
-          <div class="face f6">🦄</div>
+          <div class="face f6 decoy">🦄</div>
         </div>
       </div>
+
+      <!-- FINAL QUESTION -->
       <div class="q-card" id="finalQ" style="display:none;">
         <div class="q-num" id="qNumBadge">#--</div>
         <div class="q-text" id="qTextView"></div>
@@ -510,12 +567,14 @@
       </svg>
     </div>
 
-    <div class="ui-layer"><button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
+    <!-- Intro Button -->
+    <div class="ui-layer">
+      <button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
     </div>
   </div>
 
   <script>
-    const QUESTIONS = [
+    const MOCK_QUESTIONS = [
       "If you could have dinner with any historical figure, who would it be?",
       "What is the most useless talent you have?",
       "If you were a wrestler, what would your entrance theme song be?",
@@ -577,7 +636,7 @@
       "What is your favorite family tradition?",
       "If you could eliminate one thing from your daily routine, what would it be?",
       "What is your favorite thing about your current job?",
-      "If you could have a superpower but it had to be mundane (e.g., always finding a parking spot), what would it be?",
+      "If you could have a superpower but it had to be mundane, what would it be?",
       "What is the most interesting place you’ve visited?",
       "If you could play any sport professionally, what would it be?",
       "What is your favorite type of cuisine?",
@@ -623,7 +682,7 @@
       "What is the most memorable dream you've ever had?",
       "If you could have any car from history, what would it be?",
       "What is your favorite dipping sauce?",
-      "If you could be famous for one thing, what would you want it to be (other than your job)?",
+      "If you could be famous for one thing, what would it be (other than your job)?",
       "What is the most unusual pet you've ever seen?",
       "If you could have a theme park based on your life, what would the main ride be?",
       "What is your favorite word?",
@@ -737,11 +796,16 @@
       presenceChecks: ["Is ${name} actually here?", "Paging ${name}! Are you out there?", "Is ${name} in the house?"],
       choicePrompts: ["Choose your destiny!", "The power is in your hands!", "Pick a number or roll the die!"],
       absentReactions: ["Ghosting me? Fine! Next!", "Not here? Scandalous!", "Moving on..."],
-      rerollComments: ["Too tough? Let's spin it again!", "Switching it up!", "No problem, let's find another one!"]
+      rerollComments: ["Too tough? Let's spin it again!", "Switching it up!", "No problem, let's find another one!"],
+      manualComments: ["I wouldn't have picked that, but you be you.", "Bold choice.", "Let's see what's behind that door."],
+      winnerComments: ["big day for you!", "this is your moment!", "the spotlight is yours!"],
+      dodPuns: ["Like the rock said to the hill... Let's ROLL!", "Roll it!"],
+      dieReactions: ["Oh man, I was hoping for the Unicorn...", "The Die has spoken!"],
+      preShuffleComments: ["Let's see who our lucky participant is today...", "Who will be the chosen one?"]
     };
     function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-    let audioCtx = null, soundOn = true, announcerVoice = null, voicesLoaded = false;
+    let audioCtx = null, soundOn = true, announcerVoice = null, voicesLoaded = false, usedQuestions = [];
     let usedParticipants = [], currentParticipant = "";
     const employeeList = ['Rich', 'Zack', 'Lulu', 'Lauren', 'Brad', 'Chase', 'Matt'];
 
@@ -765,6 +829,11 @@
       osc.start(); gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration); osc.stop(audioCtx.currentTime + duration);
     }
     function playSpeechSound() { if (soundOn && audioCtx) playTone(400 + Math.random() * 150, 'sine', 0.05, 0.08); }
+    function playRollSound(duration = 5000) { if (!soundOn || !audioCtx) return; const clicks = setInterval(() => { playTone(200 + Math.random() * 200, 'square', 0.05, 0.05); }, 100); setTimeout(() => { clearInterval(clicks); playTone(1200, 'sine', 0.8, 0.1); }, duration); }
+    function playJingle() { if (!soundOn) return; initAudio();[293.66, 293.66, 293.66, 392.00, 440.00, 493.88, 523.25].forEach((f, i) => { setTimeout(() => playTone(f, 'square', 0.2, 0.1), i * 200); }); }
+    function playFanfare() { if (!soundOn) return; initAudio();[523.25, 659.25, 783.99, 1046.50].forEach((f, i) => { setTimeout(() => playTone(f, 'triangle', 0.5, 0.1), i * 100); }); }
+    function playApplause() { if (!soundOn) return; for (let i = 0; i < 15; i++) { setTimeout(() => { if (!soundOn || !audioCtx) return; const bufferSize = audioCtx.sampleRate * 0.2; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const data = buffer.getChannelData(0); for (let j = 0; j < bufferSize; j++) data[j] = Math.random() * 2 - 1; const noise = audioCtx.createBufferSource(); noise.buffer = buffer; const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.05, audioCtx.currentTime); noise.connect(gain); gain.connect(audioCtx.destination); noise.start(); }, i * 100); } }
+
     async function announcerSay(text) {
       const cap = document.getElementById('announcerCaptions');
       cap.textContent = text.replace(/Lyve/g, 'Live'); cap.style.display = 'block';
@@ -779,72 +848,73 @@
     }
     const host = document.getElementById('host'), bubble = document.getElementById('bubble');
     function moveHost(pos) { host.className = 'host-actor ' + pos; }
+    const wait = ms => new Promise(r => setTimeout(r, ms));
     async function speak(text, duration = 2000) {
       bubble.textContent = ''; bubble.classList.add('show');
-      const words = text.split('');
-      for (let c of words) { bubble.textContent += c; if (c !== ' ') playSpeechSound(); await new Promise(r => setTimeout(r, 50)); }
-      await new Promise(r => setTimeout(r, duration)); bubble.classList.remove('show');
+      for (let c of text.split('')) { bubble.textContent += c; if (c !== ' ') playSpeechSound(); await wait(50); }
+      await wait(duration); bubble.classList.remove('show');
     }
     async function startShow() {
       await initAudio(); document.getElementById('startBtn').style.display = 'none';
       await announcerSay(getRandom(script.locations));
       await announcerSay(getRandom(script.intros));
       await announcerSay("And here is your host... " + getRandom(script.hostNames) + "!");
-      moveHost('pos-center'); await new Promise(r => setTimeout(r, 1000));
+      moveHost('pos-center'); await wait(1000);
       await speak(getRandom(script.greetings));
       moveHost('pos-left'); document.getElementById('stage').classList.add('stage-open');
       shuffleParticipant();
     }
     async function shuffleParticipant() {
-      const disp = document.getElementById('partDisplay');
-      disp.style.display = 'block';
-      disp.classList.add('show');
+      const disp = document.getElementById('partDisplay'); disp.style.display = 'block'; disp.classList.add('show');
       let available = employeeList.filter(e => !usedParticipants.includes(e));
       if (available.length === 0) { usedParticipants = []; available = employeeList; }
+      for (let i = 0; i < 12; i++) { disp.textContent = employeeList[Math.floor(Math.random() * employeeList.length)]; playTone(800, 'sine', 0.05); await wait(150 + (i * 40)); }
       currentParticipant = available[Math.floor(Math.random() * available.length)];
       usedParticipants.push(currentParticipant); disp.textContent = currentParticipant;
-      await new Promise(r => setTimeout(r, 1000));
-      askPresence();
+      disp.style.color = '#e23a2b'; disp.style.transform = "scale(1.2)";
+      playFanfare(); confetti({ particleCount: 150, zIndex: 100, spread: 80, origin: { y: 0.6 } });
+      await wait(1500); askPresence();
     }
     async function askPresence() { moveHost('pos-center'); await speak(getRandom(script.presenceChecks).replace('${name}', currentParticipant)); document.getElementById('confirmPanel').classList.add('active'); }
     function confirmPresence(isHere) {
       document.getElementById('confirmPanel').classList.remove('active');
       if (isHere) { moveHost('pos-right'); document.getElementById('choicePanel').classList.add('active'); }
-      else { shuffleParticipant(); }
+      else { speak(getRandom(script.absentReactions), 2000).then(shuffleParticipant); }
     }
     function chooseManual() {
-      const val = document.getElementById('manualNum').value;
-      if (!val) return;
+      const val = document.getElementById('manualNum').value; if (!val) return;
       document.getElementById('choicePanel').classList.remove('active');
-      const num = parseInt(val, 10);
-      const res = { number: num, question: QUESTIONS[(num - 1) % QUESTIONS.length] };
-      revealFinal(res);
+      speak(`You chose number ${val}...`, 1500).then(() => {
+        const q = MOCK_QUESTIONS[(parseInt(val) - 1) % MOCK_QUESTIONS.length];
+        revealFinal({ number: val, question: q });
+      });
     }
     function chooseDOD() {
       document.getElementById('choicePanel').classList.remove('active');
-      document.getElementById('dieCont').classList.add('active');
-      document.getElementById('theDie').classList.add('rolling');
+      moveHost('pos-center'); speak("You went with the Die of Destiny!", 1500);
+      const dieCont = document.getElementById('dieCont'), theDie = document.getElementById('theDie');
+      document.getElementById('partDisplay').style.display = 'none';
+      dieCont.classList.add('active'); theDie.classList.add('rolling'); playRollSound(3000);
       setTimeout(() => {
-        document.getElementById('theDie').classList.remove('rolling');
-        document.getElementById('dieCont').classList.remove('active');
-        const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
-        const res = { number: num, question: QUESTIONS[num - 1] };
-        revealFinal(res);
+        theDie.classList.remove('rolling'); dieCont.classList.remove('active');
+        let available = MOCK_QUESTIONS.map((_, i) => i).filter(i => !usedQuestions.includes(i));
+        if (available.length === 0) { usedQuestions = []; available = MOCK_QUESTIONS.map((_, i) => i); }
+        const r = available[Math.floor(Math.random() * available.length)];
+        usedQuestions.push(r);
+        revealFinal({ number: r + 1, question: MOCK_QUESTIONS[r] });
       }, 3000);
     }
     function revealFinal(res) {
-      document.getElementById('partDisplay').style.display = 'none';
-      document.getElementById('screen').classList.add('stage-open');
+      host.style.right = "2%"; host.style.left = "auto"; host.style.transform = "scale(0.8) translateY(50px)";
       document.getElementById('finalQ').style.display = 'block';
       document.getElementById('qNumBadge').textContent = "#" + res.number;
       document.getElementById('qTextView').textContent = res.question;
-      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      playFanfare(); confetti({ particleCount: 200, zIndex: 100, spread: 100, origin: { y: 0.6 } });
     }
     function resetGame() { location.reload(); }
     function rerollQuestion() {
-      const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
-      const res = { number: num, question: QUESTIONS[num - 1] };
-      revealFinal(res);
+      const r = Math.floor(Math.random() * MOCK_QUESTIONS.length);
+      revealFinal({ number: r + 1, question: MOCK_QUESTIONS[r] });
     }
   </script>
 </body>
