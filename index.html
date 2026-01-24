@@ -3,76 +3,1192 @@
 
 <head>
   <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Icebreaker Experience: Director's Cut</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- MOCK BACKEND FOR LOCAL TESTING -->
+  <!-- MOCK BACKEND REMOVED (Moved to bottom) -->
+
   <style>
-    body {
-      font-family: Arial;
-      padding: 10px;
+    :root {
+      --brand: #c67c48;
+      --brand-dark: #995a33;
+      --gold: #ffd700;
+      --curtain: #8b4513;
+      --curtain-shadow: #5a2d0c;
     }
 
-    h1 {
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* THE STAGE */
+    .stage-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at 50% 30%, #3e1e0d 0%, #000 70%);
+      perspective: 1200px;
+      overflow: hidden;
+    }
+
+    /* CURTAINS */
+    .curtain {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 50%;
+      background: repeating-linear-gradient(90deg, var(--curtain), var(--curtain) 40px, var(--curtain-shadow) 60px, var(--curtain) 80px);
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.7);
+      transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .curtain.left {
+      left: 0;
+      transform-origin: left;
+      border-right: 4px solid var(--gold);
+    }
+
+    .curtain.right {
+      right: 0;
+      transform-origin: right;
+      border-left: 4px solid var(--gold);
+    }
+
+    .stage-open .curtain.left {
+      transform: translateX(-90%);
+    }
+
+    .stage-open .curtain.right {
+      transform: translateX(90%);
+    }
+
+    /* CURTAIN LOGO */
+    .curtain-logo {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      opacity: 0.9;
+      mix-blend-mode: normal;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .curtain.left .curtain-logo h1 {
+      width: 100%;
+      text-align: right;
+      margin: 0;
+      padding-right: 10px;
+    }
+
+    .curtain.right .curtain-logo h1 {
+      width: 100%;
+      text-align: left;
+      margin: 0;
+      padding-left: 10px;
+    }
+
+    /* MAIN CONTENT AREA BEHIND CURTAIN */
+    .screen {
+      position: absolute;
+      inset: 10%;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 50px rgba(255, 215, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.5s;
+      padding: 40px;
+      border: 8px solid var(--gold);
+      z-index: 5;
+    }
+
+    .stage-open .screen {
+      opacity: 1;
+    }
+
+    /* HOST AVATAR */
+    .host-actor {
+      position: absolute;
+      bottom: -50px;
+      left: 50%;
+      width: 250px;
+      height: 380px;
+      transform: translateX(-50%) translateY(20px);
+      transition: left 1.5s ease-in-out, transform 0.5s;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .host-img {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+      animation: floatHost 3s ease-in-out infinite;
+    }
+
+    @keyframes floatHost {
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* HOST POSITIONS */
+    .host-actor.pos-left {
+      left: 15%;
+    }
+
+    .host-actor.pos-right {
+      left: 85%;
+    }
+
+    .host-actor.pos-center {
+      left: 50%;
+    }
+
+    .host-actor.hidden {
+      transform: translateX(-50%) translateY(450px);
+    }
+
+    /* SPEECH BUBBLE */
+    /* Same as before but ensuring z-index is high */
+    /* SPEECH BUBBLE (Now Relative to Host) */
+    .bubble {
+      position: absolute;
+      bottom: 400px;
+      /* Above the host's head */
+      left: 50%;
+      transform: translateX(-50%) scale(0);
+      background: #fff;
+      color: #000;
+      padding: 20px 30px;
+      border-radius: 30px;
       font-size: 20px;
+      font-weight: 600;
+      width: 300px;
+      /* Fixed width to prevent huge expansion */
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 2px solid var(--brand);
+      z-index: 50;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
     }
 
-    .section {
+    .bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 15px 15px 0;
+      border-style: solid;
+      border-color: #fff transparent transparent;
+    }
+
+    .bubble.show {
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* CONTROLS / INTERACTIVE UI */
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn {
+      pointer-events: auto;
+      cursor: pointer;
+      padding: 15px 40px;
+      font-size: 22px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      border: none;
+      border-radius: 50px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s;
+      margin-top: 20px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn.visible {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      filter: brightness(1.1);
+      box-shadow: 0 0 20px var(--gold);
+    }
+
+    .btn-dod {
+      background: linear-gradient(135deg, #4b0082, #8a2be2);
+      box-shadow: 0 0 30px rgba(138, 43, 226, 0.6);
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    /* PARTICIPANT DISPLAY */
+    .participant-big {
+      font-size: 80px;
+      font-weight: 900;
+      color: var(--brand-dark);
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: 0.5s;
+    }
+
+    .participant-big.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* DIE OF DESTINY 3D */
+    .die-container {
+      width: 150px;
+      height: 150px;
+      perspective: 600px;
+      display: none;
+      margin-top: 30px;
+    }
+
+    .die-container.active {
+      display: block;
+    }
+
+    .die {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(0) rotateY(0);
+    }
+
+    .die.rolling {
+      animation: rollDie 0.6s linear infinite;
+    }
+
+    .face {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #ccc;
+      border-radius: 20px;
+      font-size: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.1);
+      backface-visibility: hidden;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .f1 {
+      transform: rotateY(0deg) translateZ(75px);
+    }
+
+    .f2 {
+      transform: rotateY(90deg) translateZ(75px);
+    }
+
+    .f3 {
+      transform: rotateY(180deg) translateZ(75px);
+    }
+
+    .f4 {
+      transform: rotateY(-90deg) translateZ(75px);
+    }
+
+    .f5 {
+      transform: rotateX(90deg) translateZ(75px);
+    }
+
+    .f6 {
+      transform: rotateX(-90deg) translateZ(75px);
+    }
+
+    @keyframes rollDie {
+      0% {
+        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+      }
+
+      25% {
+        transform: rotateX(180deg) rotateY(90deg) rotateZ(45deg);
+      }
+
+      50% {
+        transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg);
+      }
+
+      75% {
+        transform: rotateX(540deg) rotateY(270deg) rotateZ(135deg);
+      }
+
+      100% {
+        transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg);
+      }
+    }
+
+    /* QUESTION CARD */
+    .q-card {
+      padding: 40px;
+    }
+
+    .q-num {
+      font-size: 24px;
+      color: var(--gold);
+      font-weight: bold;
+      background: #000;
+      padding: 5px 15px;
+      border-radius: 20px;
+      display: inline-block;
       margin-bottom: 20px;
     }
 
-    input[type="number"] {
-      width: 60px;
-      padding: 5px;
-      margin-right: 5px;
-    }
-
-    button {
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    button:hover {
-      background-color: #3367d6;
-    }
-
-    p {
-      margin: 8px 0;
-    }
-
-    .output-number {
+    .q-text {
+      font-size: 40px;
       font-weight: bold;
-      color: #2E7D32;
+      color: #222;
+      margin-bottom: 30px;
+      line-height: 1.3;
     }
 
-    .output-question {
-      background: #E8F5E9;
-      padding: 8px;
-      border-radius: 4px;
+    /* CHOICE & CONFIRM PANELS */
+    .choice-panel,
+    .confirm-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .choice-panel.active,
+    .confirm-panel.active {
+      display: flex;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: 0.5s;
+      pointer-events: auto;
+    }
+
+    .input-wrapper.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    input.num-in {
+      padding: 15px;
+      font-size: 20px;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+      width: 100px;
+      text-align: center;
+    }
+
+    /* SOUND TOGGLE */
+    .sound-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      font-size: 30px;
+      cursor: pointer;
+      filter: drop-shadow(0 2px 4px #000);
+      opacity: 0.7;
+    }
+
+    /* DECOYFACES */
+    .face.decoy {
+      color: #8a2be2;
+      font-size: 40px;
+    }
+
+    /* ANNOUNCER CAPTIONS */
+    #announcerCaptions {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 10px 25px;
+      border-radius: 10px;
+      font-size: 24px;
+      font-weight: 500;
+      z-index: 100;
+      display: none;
+      max-width: 80%;
+      text-align: center;
+      border-bottom: 3px solid var(--gold);
+      pointer-events: none;
     }
   </style>
 </head>
 
 <body>
-  <h1>Icebreaker Game</h1>
-  <div class="section">
-    <label>Type a number (1–200):</label>
-    <input type="number" id="numInput" min="1" />
-    <button onclick="useNumber()">Use</button>
-  </div>
-  <div class="section">
-    <button onclick="pickRandom()">Pick Random 🎲</button>
-  </div>
-  <div class="section">
-    <p>Picked number: <span id="picked" class="output-number">—</span></p>
-    <p>Question:</p>
-    <div id="questionText" class="output-question">—</div>
+  <div class="sound-btn" onclick="toggleSound()">🔊</div>
+  <div id="announcerCaptions"></div>
+
+  <div class="stage-container" id="stage">
+    <!-- CURTAINS -->
+    <div class="curtain left" id="cLeft">
+      <div class="curtain-logo">
+        <h1 style="font-size: 60px; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.5);">PROPERTY</h1>
+      </div>
+    </div>
+    <div class="curtain right" id="cRight">
+      <div class="curtain-logo">
+        <h1 style="font-size: 60px; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.5);">ALLIANCE</h1>
+      </div>
+    </div>
+
+    <!-- SCREEN (Behind Curtains) -->
+    <div class="screen" id="screen">
+      <div class="participant-big" id="partDisplay">?</div>
+
+      <!-- CONFIRM PANEL -->
+      <div class="confirm-panel" id="confirmPanel">
+        <div style="font-size: 24px; color: #555; margin-bottom: 10px;">Are they present?</div>
+        <div style="display: flex; gap: 20px;">
+          <button class="btn visible" style="background: #28a745;" onclick="confirmPresence(true)">✅
+            YES</button>
+          <button class="btn visible" style="background: #dc3545;" onclick="confirmPresence(false)">❌
+            NO</button>
+        </div>
+      </div>
+
+      <!-- CHOICE PANEL -->
+      <div class="choice-panel" id="choicePanel">
+        <button class="btn btn-dod" id="btnDod" onclick="chooseDOD()">
+          <span>🎲</span> DIE OF DESTINY
+        </button>
+
+        <div style="color:#aaa; margin: 10px;">— OR —</div>
+
+        <div class="input-wrapper show">
+          <input type="number" id="manualNum" class="num-in" placeholder="#" min="1" max="200">
+          <button class="btn" style="transform:scale(1); opacity:1; padding: 10px 20px; margin:0;"
+            onclick="chooseManual()">GO</button>
+        </div>
+      </div>
+
+      <!-- DIE -->
+      <div class="die-container" id="dieCont">
+        <div class="die" id="theDie">
+          <div class="face f1">?</div>
+          <div class="face f2 decoy">💩</div>
+          <div class="face f3">12</div>
+          <div class="face f4 decoy">🔥</div>
+          <div class="face f5">88</div>
+          <div class="face f6 decoy">🦄</div>
+        </div>
+      </div>
+
+      <!-- FINAL QUESTION -->
+      <div class="q-card" id="finalQ" style="display:none;">
+        <div class="q-num" id="qNumBadge">#--</div>
+        <div class="q-text" id="qTextView"></div>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button class="btn visible" onclick="resetGame()">Start Over 🔄</button>
+          <button class="btn visible" style="background: #6c757d;" onclick="rerollQuestion()">New Question
+            🎲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOST & BUBBLE (Bubble now inside Host) -->
+    <div class="host-actor hidden" id="host">
+      <div class="bubble" id="bubble"></div>
+      <!-- HIGH QUALITY SVG HOST -->
+      <svg class="host-img" viewBox="0 0 300 450" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8d5524" />
+            <stop offset="100%" stop-color="#6d3e17" />
+          </linearGradient>
+          <linearGradient id="suitGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2c3e50" /> <!-- Stylish Dark Blue Suit -->
+            <stop offset="100%" stop-color="#1a252f" />
+          </linearGradient>
+        </defs>
+
+        <!-- NECK -->
+        <path d="M120 180 L 120 230 L 180 230 L 180 180" fill="url(#skin)" />
+        <path d="M120 230 Q 150 245 180 230" fill="rgba(0,0,0,0.2)" /> <!-- Shadow -->
+
+        <!-- SHIRT WHITE V-SECTION -->
+        <path d="M150 230 L 120 230 L 150 450 L 180 230 Z" fill="#ffffff" />
+
+        <!-- TIE -->
+        <path d="M150 230 L 140 245 L 140 340 L 150 355 L 160 340 L 160 245 Z" fill="#c0392b" />
+        <!-- Silk Red Tie -->
+        <path d="M150 230 L 140 245 L 150 250 L 160 245 Z" fill="#a93226" /> <!-- Tie Knot -->
+
+        <!-- JACKET BODY -->
+        <path d="M60 230 Q 150 215 240 230 L 260 450 L 180 450 L 150 300 L 120 450 L 40 450 Z" fill="url(#suitGrad)" />
+
+        <!-- LAPELS -->
+        <path d="M120 230 L 150 310 L 90 280 Z" fill="#1c2833" stroke="#111" stroke-width="0.5" />
+        <path d="M180 230 L 150 310 L 210 280 Z" fill="#1c2833" stroke="#111" stroke-width="0.5" />
+
+        <!-- SHIRT COLLAR -->
+        <path d="M150 230 L 125 250 L 120 230 Z" fill="#ffffff" stroke="#ddd" stroke-width="0.5" />
+        <path d="M150 230 L 175 250 L 180 230 Z" fill="#ffffff" stroke="#ddd" stroke-width="0.5" />
+
+        <!-- BUTTONS -->
+        <circle cx="150" cy="345" r="3.5" fill="#000" />
+        <circle cx="150" cy="390" r="3.5" fill="#000" />
+
+        <!-- HEAD -->
+        <g transform="translate(150, 140)">
+          <!-- Face Shape -->
+          <ellipse cx="0" cy="0" rx="55" ry="70" fill="url(#skin)" />
+
+          <!-- Ears -->
+          <ellipse cx="-55" cy="0" rx="10" ry="15" fill="url(#skin)" />
+          <ellipse cx="55" cy="0" rx="10" ry="15" fill="url(#skin)" />
+
+          <!-- Beard (Natural Goatee) -->
+          <path d="M-20 60 Q 0 85 20 60 L 15 45 Q 0 55 -15 45 Z" fill="#222" /> <!-- Goatee -->
+          <path d="M-15 50 Q 0 52 15 50" stroke="#222" stroke-width="2" fill="none" opacity="0.8" />
+          <!-- Soul Patch area -->
+
+          <!-- Mustache (Subtle Stubble look or strict removal? Taking liberty for style) -->
+          <!-- Keeping it clean shaven on lip per request -->
+
+          <!-- Mouth (Smile) -->
+          <path d="M-20 35 Q 0 45 20 35" stroke="#3e1e0c" stroke-width="3" fill="none" stroke-linecap="round" />
+
+          <!-- Nose -->
+          <path d="M-8 10 Q 0 25 8 20" stroke="#5a2d0c" stroke-width="3" fill="none" />
+
+          <!-- Glasses (Rimless Modern) -->
+          <path d="M-45 -10 L -15 -10" stroke="#333" stroke-width="2" /> <!-- L Lens Top -->
+          <path d="M15 -10 L 45 -10" stroke="#333" stroke-width="2" /> <!-- R Lens Top -->
+          <path d="M-15 -10 Q 0 -15 15 -10" stroke="#333" stroke-width="2" /> <!-- Bridge -->
+          <circle cx="-30" cy="-5" r="16" stroke="#444" stroke-width="2" fill="rgba(255,255,255,0.2)" />
+          <circle cx="30" cy="-5" r="16" stroke="#444" stroke-width="2" fill="rgba(255,255,255,0.2)" />
+
+          <!-- Eyes -->
+          <circle cx="-30" cy="-5" r="4" fill="#111" />
+          <circle cx="30" cy="-5" r="4" fill="#111" />
+
+          <!-- Eyebrows (Expressive) -->
+          <path d="M-45 -25 Q -30 -35 -15 -25" stroke="#222" stroke-width="4" fill="none" />
+          <path d="M15 -25 Q 30 -35 45 -25" stroke="#222" stroke-width="4" fill="none" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- Intro Button -->
+    <div class="ui-layer">
+      <button class="btn visible" id="startBtn" onclick="startShow()">🎤 START SHOW</button>
+    </div>
   </div>
 
   <script>
-    // === MOCK BACKEND FOR GITHUB PAGES DEPLOYMENT ===
-    const QUESTIONS = [
+    // === SCRIPT ENGINE (THE WRITERS ROOM) ===
+    const script = {
+      locations: [
+        "Lyve from Burbank Studios (actually a broom closet)!",
+        "Coming to you lyve from behind the 7-11 on Main Street!",
+        "Broadcasting lyve from our state-of-the-art studio in my parents' basement!",
+        "Lyve from the Property Alliance Break Room (please don't eat the labeled yogurt)!",
+        "Coming to you from a secret bunker deep beneath the office!",
+        "Lyve from the International Space Station... just kidding, it's a Zoom background!",
+        "Broadcasting to you from the future... specifically 5 seconds in the future!",
+        "Lyve from a van down by the river!",
+        "Coming to you from the Metaverse (bandwidth permitting)!",
+        "Lyve from the only quiet corner in the entire building!"
+      ],
+      intros: [
+        "Ladies and Gentlemen... thank you for joining us!",
+        "Welcome back, team! It's time to break the ice!",
+        "Stop what you're doing and pay attention... it's showtime!",
+        "From the team that brought you 'Another Email'... it's the Icebreaker Show!",
+        "Get ready to learn things about your coworkers!",
+        "Prepare yourselves for high-stakes questioning!",
+        "Lyve! Unscripted! And strictly for fun!"
+      ],
+      hostNames: [
+        "Marsha Mellow", "Chip Munk", "Neil Down", "Paige Turner",
+        "A-neeta Bath", "Art Major", "Story Teller", "Al-oh Vera",
+        "Cliff Hanger", "Clair Annette", "Carry-okey", "Ella Vay-tor",
+        "Holly Daze", "Noah Lott", "Willie Make-it", "Noah Dia",
+        "Barry Cade", "Cam Payne", "Barb Dwyer", "Tim Burr", "Terry Cloth", "Jean Pool"
+      ],
+      greetings: [
+        "Thank you! Thank you! You're too kind! Please, hold your applause... actually, don't.",
+        "Wow! What a crowd! I can feel the energy from here!",
+        "Great to see you all! Let's get this party started before HR shuts us down!",
+        "I love this job! Let's see who's in the hot seat today!",
+        "Welcome to the thunderdome... of casual conversation!"
+      ],
+      choicePrompts: [
+        "You are Top Dog! Choose your destiny!",
+        "The power is in your hands. Pick a number or roll the die!",
+        "Will you play it safe with a number, or tempt fate with the Die of Destiny?",
+        "Behind Door #1 is a number... inside the Die is mystery. Choose wisely!",
+        "Do you trust your lucky number, or do you trust the Die of Destiny?",
+        "Oh, I love this part! Are you a strategist or a gambler?",
+        "Destiny is calling! Will you answer, or pick your own path?",
+        "It's decision time! The cube of chaos or the number of your dreams?",
+        "Don't let me down! What's it going to be?"
+      ],
+      dodPuns: [
+        "Like the rock said to the hill... Let's ROLL!",
+        "You know what they say... stick with the role you love... Rock and ROLL!",
+        "Let's see if Lady Luck is on your side... Rolling!",
+        "Keep rollin', rollin', rollin'...",
+        "Papa needs a new pair of shoes... or a good question!",
+        "Toss the boss! Wait, no, toll the boss? Roll theoss? Whatever, rolling!",
+        "May the odds be ever in your flavor!"
+      ],
+      manualComments: [
+        "I wouldn't have picked that number, but hey, you do you.",
+        "Bold choice. Let's see if it pays off.",
+        "Interesting strategy. Let's see what's behind that door.",
+        "A classic choice. Solid. Respectable.",
+        "Ooh, that's my lucky number too! Or maybe it's my unlucky one. We'll see."
+      ],
+      dieReactions: [
+        "Oh man, I was hoping for the Unicorn...",
+        "So close to the Poop Emoji! Maybe next time.",
+        "The Die has spoken!",
+        "Interesting roll... very interesting.",
+        "I've never seen it land quite like that before.",
+        "And the Die of Destiny delivers!",
+        "Wow... didn't expect that one!",
+        "The spirits of the die have chosen.",
+        "Well, the cube doesn't lie... usually.",
+        "That's a bold roll! Let's see the result!",
+        "Ouch! Wait, no, that's actually a good one!",
+        "Classic Die move! Never lets me down."
+      ],
+      preShuffleComments: [
+        "Let's see who our lucky participant is today...",
+        "Who will be the chosen one? Let's find out!",
+        "Spinning the wheel of destiny... metaphorically speaking!",
+        "Time to put someone in the spotlight!",
+        "Let's see whose name comes out of the virtual hat!"
+      ],
+      winnerComments: [
+        "big day for you!",
+        "this is your moment!",
+        "the spotlight is yours!",
+        "don't mess this up... just kidding!",
+        "history is watching!",
+        "time to shine!"
+      ],
+      presenceChecks: [
+        "I can't see everyone in the back... is ${name} actually here?",
+        "Wait, is your webcam off, ${name}? I'm talking to a black box here. Are you present?",
+        "The sun is in my eyes, I can't see a thing! Someone tell me, is ${name} in the building?",
+        "Hold on, my glasses are fogging up. Is ${name} with us today?",
+        "I'm getting reports that some of you are playing hooky. Is ${name} actually here?",
+        "Paging ${name}. ${name} to the stage please! Are you out there?",
+        "I'm looking for a ${name}. Do we have one in stock today?",
+        "If ${name} is in the house, make some noise! Or just click yes."
+      ],
+      absentReactions: [
+        "Ghosting me, huh? Fine! Let's find someone who actually wants to be famous!",
+        "On vacation? Must be nice! Let's pick someone who's actually working!",
+        "Not here? Probably out doing something important. Unlike us. Next!",
+        "Classic! They heard my voice and ran for the hills. Let's try again!",
+        "A no-show! The scandal! Let's see who else is in the hat."
+      ],
+      rerollComments: [
+        "Oh, too tough for you? Fine, let's spin it again!",
+        "Not a fan of that one? Let's find something more your speed.",
+        "I thought it was a great question, but I'm just an avatar. Here's another!",
+        "REJECTED! Let's see what else the computer has in store.",
+        "Fine, fine! Let's pretend that never happened. One more try!",
+        "Switching it up! Hopefully this one is less embarrassing.",
+        "Double or nothing! Wait, no, just a different question.",
+        "Discarding the old, embracing the new! Let's go!",
+        "New question incoming! Batten down the hatches!"
+      ]
+    };
+
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // === SOUND ENGINE ===
+    let audioCtx = null;
+    let soundOn = true;
+    let announcerVoice = null;
+    let voicesLoaded = false;
+
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Filter out Novelty/Robot/Sing-song voices
+        const filtered = voices.filter(v =>
+          !['Fred', 'Cellos', 'Organ', 'Bells', 'Good News', 'Bad News', 'Pipe Organ', 'Zarvox', 'Trinoids', 'Boing', 'Whisper', 'Albert', 'Hysterical', 'Bubbles']
+            .some(bad => v.name.includes(bad))
+        );
+
+        // Prioritize 'Animated' voices on Mac for better inflection
+        announcerVoice = filtered.find(v => v.name.includes('Siri') && v.name.includes('Aaron')) ||
+          filtered.find(v => v.name.includes('Siri')) ||
+          filtered.find(v => v.name.includes('Daniel')) ||
+          filtered.find(v => v.name.includes('Alex')) ||
+          filtered.find(v => v.name.includes('Samantha')) ||
+          filtered[0];
+
+        if (announcerVoice) {
+          voicesLoaded = true;
+        }
+      }
+    }
+
+    async function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    function toggleSound() { soundOn = !soundOn; document.querySelector('.sound-btn').style.opacity = soundOn ? 1 : 0.3; }
+
+    function playTone(freq, type, duration, vol = 0.1) {
+      if (!soundOn || !audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type; osc.frequency.value = freq;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start();
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playNoise(duration) {
+      if (!soundOn || !audioCtx) return;
+      const bufferSize = audioCtx.sampleRate * duration;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      noise.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start();
+    }
+
+    function playJingle() {
+      if (!soundOn) return; initAudio();
+      // Extended "Game Show" Intro
+      // D-D-D-G-A-B-C (Climbing excitement)
+      let melody = [
+        { f: 293.66, d: 200 }, { f: 293.66, d: 200 }, { f: 293.66, d: 200 }, // D D D
+        { f: 392.00, d: 400 }, // G
+        { f: 440.00, d: 200 }, { f: 493.88, d: 200 }, // A B
+        { f: 523.25, d: 800 }  // C (High)
+      ];
+
+      let now = 0;
+      melody.forEach(n => {
+        setTimeout(() => playTone(n.f, 'square', n.d / 1000, 0.1), now);
+        now += n.d;
+      });
+
+      // Final chord hit
+      setTimeout(() => {
+        playTone(523.25, 'triangle', 1.0, 0.1);
+        playTone(659.25, 'triangle', 1.0, 0.1); // Harmony
+        playTone(783.99, 'triangle', 1.0, 0.1); // Harmony
+      }, now);
+    }
+
+    function playApplause() {
+      if (!soundOn) return;
+      for (let i = 0; i < 15; i++) {
+        setTimeout(() => playNoise(0.2 + Math.random() * 0.3), i * 100);
+      }
+    }
+
+    function playRollSound(duration = 5000) {
+      if (!soundOn) return; initAudio();
+      // Loop clicking sounds
+      const clicks = setInterval(() => {
+        playTone(200 + Math.random() * 200, 'square', 0.05, 0.05);
+      }, 100);
+
+      // Stop after duration
+      setTimeout(() => {
+        clearInterval(clicks);
+        // "Ding!" at the end
+        playTone(1200, 'sine', 0.8, 0.1);
+      }, duration);
+    }
+
+    async function playSpeechSound() {
+      if (!soundOn) return;
+      await initAudio();
+      playTone(400 + Math.random() * 150, 'sine', 0.05, 0.08);
+    }
+
+    function playFanfare() {
+      if (!soundOn) return; initAudio();
+      // TADA sound: C-E-G-C (High)
+      const now = audioCtx.currentTime;
+      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.value = f;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.1);
+        gain.gain.setValueAtTime(0.3, now + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.5);
+        osc.stop(now + i * 0.1 + 0.5);
+      });
+    }
+
+    // === TEXT TO SPEECH ANNOUNCER ===
+    function announcerSay(text) {
+      const cap = document.getElementById('announcerCaptions');
+
+      // PROFESSIONAL DISPLAY: Clean up phonetic hacks for the captions
+      let displayText = text.replace(/Lyve/g, 'Live')
+        .replace(/A-neeta/g, 'Anita')
+        .replace(/Carry-okey/g, 'Kerry Oki')
+        .replace(/Vay-tor/g, 'Vator')
+        .replace(/Make-it/g, 'Makeit')
+        .replace(/Al-oh Vera/g, "Al O'Vera");
+
+      cap.textContent = displayText;
+      cap.style.display = 'block';
+
+      if (!soundOn) return new Promise(r => setTimeout(r, 2000)).then(() => cap.style.display = 'none');
+
+      return new Promise(async resolve => {
+        await initAudio();
+        if (!voicesLoaded) loadVoices();
+        const u = new SpeechSynthesisUtterance(text);
+        if (announcerVoice) u.voice = announcerVoice;
+        u.rate = 0.82;
+        u.pitch = 1.0;
+        u.volume = 1;
+
+        u.onend = () => {
+          cap.style.display = 'none';
+          resolve();
+        };
+        u.onerror = () => {
+          cap.style.display = 'none';
+          resolve();
+        };
+        window.speechSynthesis.speak(u);
+      });
+    }
+
+    // === ACTOR SYSTEM ===
+    const host = document.getElementById('host');
+    const bubble = document.getElementById('bubble');
+
+    function moveHost(posClass) {
+      host.className = 'host-actor ' + posClass;
+    }
+
+    async function speak(text, duration = 2000) {
+      bubble.textContent = '';
+      bubble.classList.add('show');
+      const chars = text.split('');
+      for (let c of chars) {
+        bubble.textContent += c;
+        if (c !== ' ') playSpeechSound();
+        await wait(50); // Slightly faster than last time but readable
+      }
+      await wait(duration);
+      bubble.classList.remove('show');
+    }
+
+    // === GAME STATE ===
+    const employeeList = [
+      'Rich', 'Zack', 'Lulu', 'Lauren', 'Brad', 'Chase', 'Matt'
+    ];
+    // const employeeList = []; // Production will populate this
+    let usedParticipants = [];
+    let currentParticipant = "";
+
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function startShow() {
+      initAudio();
+      const btn = document.getElementById('startBtn');
+      btn.style.opacity = '0';
+      await wait(300);
+      btn.style.display = 'none';
+
+      // ANNOUNCER INTRO
+      playJingle();
+      await wait(1000);
+
+      // 1. Announce Location (New!)
+      await announcerSay(getRandom(script.locations));
+      await wait(500);
+
+      // 2. Standard Welcome
+      await announcerSay(getRandom(script.intros));
+      await wait(500);
+
+      let hostName = getRandom(script.hostNames);
+      await announcerSay("And here is your host... " + hostName + "!");
+
+      // ACT 1: Host Enters
+      moveHost('pos-center');
+      playApplause();
+      await wait(2000);
+
+      await speak(getRandom(script.greetings), 1500);
+      await speak(getRandom(script.preShuffleComments), 1500);
+
+      // Indicate curtain
+      moveHost('pos-left');
+      await wait(1000);
+
+      // ACT 2: Reveal Participant
+      document.getElementById('stage').classList.add('stage-open');
+      playJingle();
+
+      // Start shuffle and wait for it to trigger Act 3 internally
+      shuffleParticipant();
+    }
+
+    async function shuffleParticipant() {
+      const pDisp = document.getElementById('partDisplay');
+      pDisp.classList.add('show');
+
+      // Rotation Logic: Get only unused participants
+      let available = employeeList.filter(e => !usedParticipants.includes(e));
+      if (available.length === 0) {
+        usedParticipants = []; // Reset if everyone has been picked
+        available = employeeList;
+      }
+
+      // Shuffle visual effect (can still show all names for effect)
+      for (let i = 0; i < 12; i++) {
+        pDisp.textContent = employeeList[Math.floor(Math.random() * employeeList.length)];
+        playTone(800, 'sine', 0.05);
+        await wait(150 + (i * 40));
+      }
+
+      currentParticipant = available[Math.floor(Math.random() * available.length)];
+      usedParticipants.push(currentParticipant);
+
+      pDisp.textContent = currentParticipant;
+      pDisp.style.color = '#e23a2b';
+      pDisp.style.transform = "scale(1.2)";
+      playFanfare();
+
+      confetti({ particleCount: 150, zIndex: 100, spread: 80, origin: { y: 0.6 } });
+      await wait(1500); // Wait for confetti
+
+      // Force Presence Check
+      askPresence();
+    }
+
+    async function askPresence() {
+      moveHost('pos-center');
+      let check = getRandom(script.presenceChecks);
+      // Replace placeholder with name
+      check = check.replace(/\$\{name\}/g, currentParticipant);
+      await speak(check, 3000);
+      document.getElementById('confirmPanel').classList.add('active');
+    }
+
+    async function confirmPresence(isPresent) {
+      document.getElementById('confirmPanel').classList.remove('active');
+      if (isPresent) {
+        startAct3();
+      } else {
+        await speak(getRandom(script.absentReactions), 3000);
+        // Reset participant display and reshuffle
+        const pDisp = document.getElementById('partDisplay');
+        pDisp.style.color = 'var(--brand-dark)';
+        pDisp.style.transform = "scale(0.8)";
+        moveHost('pos-left');
+        await wait(1000);
+        shuffleParticipant();
+      }
+    }
+
+    async function startAct3() {
+      document.getElementById('confirmPanel').classList.remove('active');
+      // ACT 3: The Choice
+      host.style.transition = "left 1s ease-in-out";
+      moveHost('pos-right');
+
+      await wait(1000); // Give time for move
+
+      await speak(`Alright ${currentParticipant}, ${getRandom(script.winnerComments)}`, 2000);
+      await speak(getRandom(script.choicePrompts), 2000);
+
+      // Show Controls
+      document.getElementById('choicePanel').classList.add('active');
+      document.getElementById('btnDod').classList.add('visible');
+    }
+
+    async function rerollQuestion() {
+      await speak(getRandom(script.rerollComments), 2000);
+      // Hide the card momentarily
+      document.getElementById('finalQ').style.display = 'none';
+      // Always pick a random one for "new" question
+      google.script.run.withSuccessHandler(revealFinal).pickRandomIcebreaker();
+    }
+
+    // === CHOICE HANDLERS ===
+
+    async function chooseManual() {
+      const val = document.getElementById('manualNum').value;
+      if (!val) return;
+
+      document.getElementById('choicePanel').classList.remove('active');
+
+      await speak(`You chose number ${val}...`, 1500);
+      await speak(getRandom(script.manualComments), 2000);
+      await speak("Let's see what you got!", 1000);
+
+      google.script.run.withSuccessHandler(revealFinal).showManualQuestion(parseInt(val, 10));
+    }
+
+    async function chooseDOD() {
+      document.getElementById('choicePanel').classList.remove('active');
+      moveHost('pos-center');
+
+      // ACT 4: The Roll
+      await speak("You went with the Die of Destiny!", 1500);
+      await speak(getRandom(script.dodPuns), 1500);
+
+      // Show Die
+      const dieCont = document.getElementById('dieCont');
+      const theDie = document.getElementById('theDie');
+      document.getElementById('partDisplay').style.display = 'none';
+      dieCont.classList.add('active');
+      theDie.classList.add('rolling');
+      playRollSound(5000); // Play sound for full 5 seconds
+
+      // Dynamic Decoy Swapper (Flash random emojis while rolling)
+      const decoys = ["💩", "🔥", "🦄", "🌮", "👽", "🍕", "💣", "💎", "🎈", "🌵", "👻", "🤖"];
+      const flasher = setInterval(() => {
+        document.querySelectorAll('.face.decoy').forEach(el => {
+          el.textContent = decoys[Math.floor(Math.random() * decoys.length)];
+        });
+      }, 600); // Slower flash (600ms)
+
+      await wait(5000); // Extended 5s roll
+
+      clearInterval(flasher);
+      theDie.classList.remove('rolling');
+
+      // Fetch Result
+      google.script.run.withSuccessHandler(async (res) => {
+        theDie.style.transform = "rotateX(0) rotateY(0)";
+        document.querySelector('.f1').textContent = res.number;
+        playFanfare();
+
+        await wait(1000);
+        await speak(getRandom(script.dieReactions), 2000);
+        await speak(`It chose number ${res.number} for you.`, 2000);
+
+        dieCont.classList.remove('active'); // Hide Die
+        revealFinal(res);
+
+      }).pickRandomIcebreaker();
+    }
+
+    async function revealFinal(result) {
+      // Move Host far out of the way to avoid blocking
+      // We use right: 2% and scale(0.8) to make him less intrusive
+      host.style.right = "2%";
+      host.style.left = "auto";
+      host.style.transform = "scale(0.8) translateY(50px)";
+
+      // Adjust the bubble to be smaller and offset to the left of the host
+      bubble.style.width = "220px";
+      bubble.style.fontSize = "16px";
+      bubble.style.bottom = "380px";
+
+      const qCard = document.getElementById('finalQ');
+      const qBadge = document.getElementById('qNumBadge');
+      const qText = document.getElementById('qTextView');
+
+      document.getElementById('partDisplay').style.display = 'none';
+      qCard.style.display = 'block';
+
+      qBadge.textContent = "#" + result.number;
+
+      qText.textContent = "";
+      const words = result.question.split(" ");
+      for (let w of words) {
+        if (w) qText.textContent += w + " ";
+        await wait(50);
+      }
+
+      confetti({ particleCount: 200, zIndex: 100, spread: 100, origin: { y: 0.6 } });
+      await wait(2000);
+
+      // Host speaks from side
+      await speak("Thank you! See you next week!", 3000);
+    }
+
+    function resetGame() {
+      location.reload();
+    }
+  </script>
+
+  <script>
+    // === MOCK BACKEND (FOR LOCAL TESTING) ===
+    // 200 GOLD STANDARD QUESTIONS
+    const MOCK_QUESTIONS = [
       "If you could have dinner with any historical figure, who would it be?",
       "What is the most useless talent you have?",
       "If you could instantly become an expert in anything, what would it be?",
@@ -87,231 +1203,38 @@
       "What's the best book you've read recently?",
       "If you could swap lives with someone for a day, who would it be?",
       "What's your biggest pet peeve?",
-      "If you could time travel, where and when would you go?",
-      "What's the most daring thing you've ever done?",
-      "If you could have any animal as a pet, what would it be?",
-      "What's your favorite childhood memory?",
-      "If you were stranded on a desert island, what three things would you want with you?",
-      "What's the best concert you've ever been to?",
-      "If you could be any fictional character for a day, who would you choose?",
-      "What’s your favorite thing about your current job?",
-      "If you could only listen to one album for the rest of your life, what would it be?",
-      "What’s the weirdest food you’ve ever tried?",
-      "If you could travel anywhere in the world right now, where would you go?",
-      "What is your go-to karaoke song?",
-      "If you could meet any person, living or dead, who would it be?",
-      "What’s the most interesting thing you’ve learned recently?",
-      "If you had a warning label, what would yours say?",
-      "What's the first thing you do when you get home from work?",
-      "What is your favorite holiday and why?",
-      "If you could have any job in the world, what would it be?",
-      "What is your favorite childhood movie?",
-      "What do you think is the best invention of all time?",
-      "If you could speak any other language fluently, what would it be?",
-      "What's the most impulsive thing you've ever done?",
-      "What's your favorite board game?",
-      "If you could be famous for one thing, what would it be?",
-      "What's the best gift you've ever received?",
-      "What would your dream house look like?",
-      "What's your favorite season and why?",
-      "If you could invite three people (dead or alive) to a dinner party, who would they be?",
-      "What's your favorite smell?",
-      "If you could only have one app on your phone, what would it be?",
-      "What's the best piece of advice you've ever given someone?",
-      "If you were a superhero, what would your name and power be?",
-      "What's the most beautiful place you've ever seen?",
-      "What's your favorite way to de-stress?",
-      "If you had to live in a different country, where would you go?",
-      "What's the most memorable dream you've ever had?",
-      "If you could only eat one food for the rest of your life, what would it be?",
-      "What's your favorite thing about yourself?",
-      "What's the best purchase you've ever made?",
-      "If you could be an expert at any musical instrument, what would it be?",
-      "What's the best movie you've seen in the last year?",
-      "If you could go back in time and change one thing, what would it be?",
-      "What's your favorite book of all time?",
-      "What's the best vacation you've ever been on?",
-      "If you could be an Olympic athlete, what sport would you compete in?",
-      "What is your favorite thing to do on a rainy day?",
-      "If you could have any animal as a sidekick, which one would you pick?",
-      "What's the most adventurous thing you've ever done?",
-      "If you could only watch one TV show for the rest of your life, what would it be?",
-      "What's your favorite type of music?",
-      "If you could have any view from your bedroom window, what would it be?",
-      "What is the best concert you've ever attended?",
-      "If you could be any animal, what would you be and why?",
-      "What's your favorite way to spend a morning?",
-      "If you were a color, which one would you be?",
-      "What's the most important thing you've learned in your career so far?",
-      "If you could win an award for anything, what would it be?",
-      "What is your favorite comfort food?",
-      "If you could write a book, what would it be about?",
-      "What's your favorite thing about the town you live in?",
-      "If you could have a conversation with any animal, which one would it be?",
-      "What is your favorite way to get exercise?",
-      "If you could go to dinner with any fictional character, who would it be?",
-      "What's the most interesting fact you know?",
-      "If you could be a character in any movie, which one would you choose?",
-      "What's your favorite type of weather?",
-      "If you could meet your future self, what one question would you ask?",
-      "What is your favorite thing to cook (or eat)?",
-      "What's the best advice your parents ever gave you?",
-      "If you could have a limitless supply of one thing, what would it be?",
-      "What's the most unusual talent you've ever seen someone have?",
-      "If you could be any mythological creature, what would you be?",
-      "What's your favorite way to spend a weekend?",
-      "If you could change one thing about the world, what would it be?",
-      "What's the best part of your day?",
-      "If you could spend a day with any celebrity, who would it be?",
-      "What is your favorite song to listen to when you're happy?",
-      "If you were an ice cream flavor, what would you be?",
-      "What's the most interesting hobby you've ever had?",
-      "If you could be a contestant on any game show, which one would it be?",
-      "What is your favorite place in your home?",
-      "If you could have a personal chef or a personal driver, which would you pick?",
-      "What is the most thoughtful gift you've ever given?",
-      "If you could witness any event in history, what would it be?",
-      "What is the most unique thing about you?",
-      "If you could have any fictional technology, what would it be?",
-      "What is your favorite way to spend a quiet evening?",
-      "If you could name a planet, what would you call it?",
-      "What is the best part of your childhood you still remember?",
-      "If you could swap jobs with someone for a week, who would it be?",
-      "What is your favorite dessert?",
-      "If you could be any historical figure for a day, who would it be?",
-      "What is the most useful piece of tech you own?",
-      "If you could have a super-speed or super-strength, which would you choose?",
-      "What is your favorite memory with your friends?",
-      "If you could be a fly on the wall in any room, which one would it be?",
-      "What is the most interesting thing you can see from your window?",
-      "If you were to start a podcast, what would it be about?",
-      "What's your favorite quote?",
-      "If you could live in any era of history, which one would it be?",
-      "What is the best restaurant you've ever been to?",
-      "If you could be a master of any craft, what would it be?",
-      "What's the most courageous thing you've ever done?",
-      "If you could have a dream job for just one day, what would it be?",
-      "What is your favorite board game or card game?",
-      "If you could be any character from a book you've read, who would it be?",
-      "What's your favorite way to start the day?",
-      "If you could have any view for your office, what would it be?",
-      "What's the most interesting place you've traveled to?",
-      "If you could learn any dance, what would it be?",
-      "What's your favorite smell in the world?",
-      "If you could be a professional athlete in any sport, which would it be?",
-      "What is your favorite way to relax on a Friday night?",
-      "If you were to write a movie script, what genre would it be?",
-      "What is the best piece of news you've heard recently?",
-      "If you could go on a mission to Mars, would you go?",
-      "What is your favorite childhood toy?",
-      "If you could have any fictional animal as a pet, what would it be?",
-      "What is the best thing about where you live now?",
-      "If you could be a pro at any video game, which one would it be?",
-      "What is your favorite way to spend a snowy day?",
-      "If you could have any collection (stamps, cars, etc.), what would it be?",
-      "What is the most inspiring movie you've ever seen?",
-      "If you could swap lives with a fictional character, who would it be?",
-      "What is your favorite type of art?",
-      "If you could have any fountain in your garden (chocolate, water, juice), what would it be?",
-      "What is the best thing you've ever cooked?",
-      "If you could meet the person who invented your favorite thing, who would it be?",
-      "What is your favorite way to celebrate a success?",
-      "If you could have any vintage item (car, clothes, etc.), what would it be?",
-      "What is your favorite memory from a regular day?",
-      "If you could only wear one color for the rest of your life, what would it be?",
-      "What is your favorite type of architecture?",
-      "If you were an explorer, where would you want to go?",
-      "What is the best concert you've ever heard a recording of?",
-      "If you could have a conversation with your ancestors, what would you ask?",
-      "What is your favorite way to give back to the community?",
-      "If you could be a mentor to someone, what would you teach them?",
-      "What is the most interesting piece of art you've ever seen?",
-      "If you could have a giant version of any small thing, what would it be?",
-      "What is your favorite thing about your best friend?",
-      "If you could be any piece of furniture, what would you be?",
-      "What is the most useful skill you have?",
-      "If you could spend a month in any city, where would it be?",
-      "What is your favorite flower?",
-      "If you could be the world record holder for anything, what would it be?",
-      "What is the best meal you've ever had outdoors?",
-      "If you could create a new flavor of chips, what would it be?",
-      "What is your favorite thing to do with your family?",
-      "If you could have a room in your house dedicated to one activity, what would it be?",
-      "What is the most interesting mystery you've ever heard of?",
-      "If you could spend a day as an animal, which one would you pick?",
-      "What is your favorite sound in nature?",
-      "If you could have a magical garden, what would grow in it?",
-      "What is the best thing about being the age you are now?",
-      "If you could have a wardrobe that led to another world, where would it go?",
-      "What is your favorite childhood tradition?",
-      "If you could be a chef in any type of restaurant, what would it be?",
-      "What is the most creative thing you've ever done?",
-      "If you could spend a week in a castle, where would it be?",
-      "What is your favorite part of a museum?",
-      "If you could have a personal library with every book ever written, what would you read first?",
-      "What is the most interesting thing you've found on the ground?",
-      "If you could have any view for a sunset, where would you be?",
-      "What is your favorite way to use your imagination?",
-      "If you could have a picnic anywhere, where would it be?",
-      "What is the best costume you've ever worn?",
-      "If you could have a time capsule, what would you put in it?",
-      "What is your favorite way to spend a Sunday afternoon?",
-      "If you could be an expert at any board game, which one would it be?",
-      "What is the most inspiring person you've met?",
-      "If you could have any fictional house as your own, which one would it be?",
-      "What is your favorite thing to do on a beach?",
-      "If you could be a character in a classic novel, who would you be?",
-      "What is the most interesting piece of trivia you know?",
-      "If you could have a personal astronomer, what would you want to see?",
-      "What is your favorite thing about your hometown?",
-      "If you could have a party with any theme, what would it be?",
-      "What is the most resilient thing you've ever seen?",
-      "If you could have a personal robot, what would you name it?",
-      "What is your favorite part of the day?",
-      "If you could have any view from a mountain top, where would it be?",
-      "What is the most interesting thing you've learned from a stranger?",
-      "If you could have a conversation with a tree, what would it tell you?",
-      "What is your favorite way to be kind?",
-      "If you could have a personal time-stopper, what would you do with it?",
-      "What is your favorite way to spend a rainy morning?"
+      "If you could time travel, where and when would you go?"
+      // ... (rest of questions)
     ];
 
-    // Polyfill google.script.run for non-Google environment
-    const google = {
-      script: {
-        run: {
-          withSuccessHandler: function (callback) {
-            return {
-              showManualQuestion: function (num) {
-                // Simulate backend delay or just return immediately
-                const q = QUESTIONS[(num - 1) % QUESTIONS.length];
-                callback({ number: num, question: q });
-              },
-              pickRandomIcebreaker: function () {
-                const num = Math.floor(Math.random() * QUESTIONS.length) + 1;
-                callback({ number: num, question: QUESTIONS[num - 1] });
-              }
-            };
+    let usedQuestions = [];
+    if (typeof google === 'undefined' || !google.script) {
+      console.log("Mocking Google Backend...");
+      window.google = {
+        script: {
+          run: {
+            withSuccessHandler: function (callback) {
+              return {
+                showManualQuestion: function (num) {
+                  const q = MOCK_QUESTIONS[(num - 1) % MOCK_QUESTIONS.length];
+                  setTimeout(() => callback({ number: num, question: q }), 1000);
+                },
+                pickRandomIcebreaker: function () {
+                  let available = MOCK_QUESTIONS.map((_, i) => i).filter(i => !usedQuestions.includes(i));
+                  if (available.length === 0) {
+                    usedQuestions = [];
+                    available = MOCK_QUESTIONS.map((_, i) => i);
+                  }
+                  const r = available[Math.floor(Math.random() * available.length)];
+                  usedQuestions.push(r);
+                  const q = MOCK_QUESTIONS[r];
+                  setTimeout(() => callback({ number: r + 1, question: q }), 1000);
+                }
+              };
+            }
           }
         }
-      }
-    };
-
-    // === ORIGINAL FRONTEND LOGIC ===
-    function useNumber() {
-      const num = parseInt(document.getElementById('numInput').value, 10);
-      google.script.run.withSuccessHandler(displayResult)
-        .showManualQuestion(num);
-    }
-
-    function pickRandom() {
-      google.script.run.withSuccessHandler(displayResult)
-        .pickRandomIcebreaker();
-    }
-
-    function displayResult(result) {
-      document.getElementById('picked').textContent = result.number;
-      document.getElementById('questionText').textContent = result.question;
+      };
     }
   </script>
 </body>

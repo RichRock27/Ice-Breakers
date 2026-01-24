@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <style>
+        body {
+            font-family: Arial;
+            padding: 10px;
+        }
+
+        h1 {
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            margin-right: 5px;
+        }
+
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #3367d6;
+        }
+
+        p {
+            margin: 8px 0;
+        }
+
+        .output-number {
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .output-question {
+            background: #E8F5E9;
+            padding: 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Icebreaker Game</h1>
+    <div class="section">
+        <label>Type a number (1–200):</label>
+        <input type="number" id="numInput" min="1" />
+        <button onclick="useNumber()">Use</button>
+    </div>
+    <div class="section">
+        <button onclick="pickRandom()">Pick Random 🎲</button>
+    </div>
+    <div class="section">
+        <p>Picked number: <span id="picked" class="output-number">—</span></p>
+        <p>Question:</p>
+        <div id="questionText" class="output-question">—</div>
+    </div>
+
+    <script>
+        function useNumber() {
+            const num = parseInt(document.getElementById('numInput').value, 10);
+            google.script.run.withSuccessHandler(displayResult)
+                .showManualQuestion(num);
+        }
+
+        function pickRandom() {
+            google.script.run.withSuccessHandler(displayResult)
+                .pickRandomIcebreaker();
+        }
+
+        function displayResult(result) {
+            document.getElementById('picked').textContent = result.number;
+            document.getElementById('questionText').textContent = result.question;
+        }
+    </script>
+</body>
+
+</html>
