@@ -8,3 +8,12 @@ function doGet() {
 function getQuestions() {
   return JSON.parse(HtmlService.createHtmlOutputFromFile('questions.json').getContent());
 }
+
+function getSheetConfig() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    return { url: ss.getUrl(), name: ss.getName() };
+  } catch (e) {
+    return { url: null, name: null };
+  }
+}
