@@ -3,6 +3,7 @@
 
 <head>
   <base target="_top">
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Icebreaker Experience: Director's Cut</title>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -461,12 +462,63 @@
       border-bottom: 3px solid var(--gold);
       pointer-events: none;
     }
+
+    .audio-debug {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      z-index: 9999;
+      background: rgba(10, 12, 20, 0.8);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .audio-debug button {
+      background: #0b2b69;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+    }
   </style>
 </head>
 
 <body>
   <div class="sound-btn" onclick="toggleSound()">🔊</div>
   <div id="announcerCaptions"></div>
+  <div class="audio-debug">
+    <button onclick="debugPlayIntro()">Play Intro</button>
+    <button onclick="debugHostClicks()">Host Clicks</button>
+    <button onclick="debugChant()">Chant</button>
+    <button onclick="debugReaction()">Reaction</button>
+    <button onclick="debugSuspense()">Suspense</button>
+    <button onclick="debugDice()">Dice</button>
+    <div id="audioSourceLabel" style="font-size:10px; opacity:0.8;"></div>
+  </div>
+  <audio id="introTheme" preload="auto" src="assets/audio/intro_theme_v8.mp3"></audio>
+  <audio id="mainTheme" preload="auto" loop src="assets/audio/main_theme_v8.mp3"></audio>
+  <audio id="crowdAmbience" preload="auto" loop src="assets/audio/crowd.mp3"></audio>
+  <audio id="sfxWhoosh" preload="auto" src="assets/audio/whoosh.mp3"></audio>
+  <audio id="sfxApplause" preload="auto" src="assets/audio/applause.mp3"></audio>
+  <audio id="sfxBuzzer" preload="auto" src="assets/audio/buzzer.mp3"></audio>
+  <audio id="sfxChant" preload="auto" src="assets/audio/chant.mp3?v=3"></audio>
+  <audio id="sfxSuspense" preload="auto" src="assets/audio/suspense_hit.mp3"></audio>
+  <audio id="sfxReactionCheer" preload="auto" src="assets/audio/reaction_cheer.mp3?v=2"></audio>
+  <audio id="sfxReactionOoh" preload="auto" src="assets/audio/reaction_yeah.mp3?v=2"></audio>
+  <audio id="sfxReactionOhNo" preload="auto" src="assets/audio/reaction_boo.mp3?v=2"></audio>
+  <audio id="sfxReactionGasp" preload="auto" src="assets/audio/reaction_clap.mp3?v=2"></audio>
+  <audio id="sfxHeckle1" preload="auto" src="assets/audio/heckle1.mp3?v=2"></audio>
+  <audio id="sfxHeckle2" preload="auto" src="assets/audio/heckle2.mp3?v=2"></audio>
+  <audio id="sfxHeckle3" preload="auto" src="assets/audio/heckle3.mp3?v=2"></audio>
 
   <div class="stage-container" id="stage">
     <!-- CURTAINS -->
@@ -489,10 +541,8 @@
       <div class="confirm-panel" id="confirmPanel">
         <div style="font-size: 24px; color: #555; margin-bottom: 10px;">Are they present?</div>
         <div style="display: flex; gap: 20px;">
-          <button class="btn visible" style="background: #28a745;" onclick="confirmPresence(true)">✅
-            YES</button>
-          <button class="btn visible" style="background: #dc3545;" onclick="confirmPresence(false)">❌
-            NO</button>
+          <button class="btn visible" style="background: #28a745;" onclick="confirmPresence(true)">YES</button>
+          <button class="btn visible" style="background: #dc3545;" onclick="confirmPresence(false)">NO</button>
         </div>
       </div>
 
@@ -756,6 +806,10 @@
     let soundOn = true;
     let announcerVoice = null;
     let voicesLoaded = false;
+    const audioEls = {};
+    let showStarted = false;
+    let introComplete = false;
+    let tickTimer = null;
 
     function loadVoices() {
       const voices = window.speechSynthesis.getVoices();
@@ -765,13 +819,12 @@
           !['Fred', 'Cellos', 'Organ', 'Bells', 'Good News', 'Bad News', 'Pipe Organ', 'Zarvox', 'Trinoids', 'Boing', 'Whisper', 'Albert', 'Hysterical', 'Bubbles']
             .some(bad => v.name.includes(bad))
         );
+        const english = filtered.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+        const preferred = (v) => /Samantha|Ava|Allison|Tom|Alex|Daniel|Google US English|Zoe|Tessa|Karen|Moira/i.test(v.name);
 
-        // Prioritize 'Animated' voices on Mac for better inflection
-        announcerVoice = filtered.find(v => v.name.includes('Siri') && v.name.includes('Aaron')) ||
-          filtered.find(v => v.name.includes('Siri')) ||
-          filtered.find(v => v.name.includes('Daniel')) ||
-          filtered.find(v => v.name.includes('Alex')) ||
-          filtered.find(v => v.name.includes('Samantha')) ||
+        announcerVoice = english.find(preferred) ||
+          english.find(v => v.name.includes('Siri')) ||
+          english[0] ||
           filtered[0];
 
         if (announcerVoice) {
@@ -791,7 +844,174 @@
       }
     }
 
-    function toggleSound() { soundOn = !soundOn; document.querySelector('.sound-btn').style.opacity = soundOn ? 1 : 0.3; }
+    function primeAudioElements() {
+      if (audioEls.introTheme) return;
+      audioEls.introTheme = document.getElementById('introTheme');
+      audioEls.mainTheme = document.getElementById('mainTheme');
+      audioEls.crowdAmbience = document.getElementById('crowdAmbience');
+      audioEls.sfxWhoosh = document.getElementById('sfxWhoosh');
+      audioEls.sfxApplause = document.getElementById('sfxApplause');
+      audioEls.sfxBuzzer = document.getElementById('sfxBuzzer');
+      audioEls.sfxChant = document.getElementById('sfxChant');
+      audioEls.sfxSuspense = document.getElementById('sfxSuspense');
+      audioEls.sfxReactionCheer = document.getElementById('sfxReactionCheer');
+      audioEls.sfxReactionOoh = document.getElementById('sfxReactionOoh');
+      audioEls.sfxReactionOhNo = document.getElementById('sfxReactionOhNo');
+      audioEls.sfxReactionGasp = document.getElementById('sfxReactionGasp');
+      audioEls.sfxHeckle1 = document.getElementById('sfxHeckle1');
+      audioEls.sfxHeckle2 = document.getElementById('sfxHeckle2');
+      audioEls.sfxHeckle3 = document.getElementById('sfxHeckle3');
+      const label = document.getElementById('audioSourceLabel');
+      if (label) {
+        label.textContent = `Intro: ${audioEls.introTheme?.src?.split('/').pop()} | Main: ${audioEls.mainTheme?.src?.split('/').pop()}`;
+      }
+    }
+
+    function playSfx(el, volume = 0.85) {
+      if (!soundOn || !el) return;
+      el.pause();
+      el.currentTime = 0;
+      el.volume = volume;
+      el.play().catch(() => {});
+    }
+
+    function startTicking() {
+      if (!soundOn) return;
+      if (tickTimer) return;
+      tickTimer = setInterval(() => {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 1400;
+        gain.gain.value = 0.05;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      }, 120);
+    }
+
+    function stopTicking() {
+      if (!tickTimer) return;
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+
+    function playCrowdReaction() {
+      const pool = [
+        audioEls.sfxReactionCheer,
+        audioEls.sfxReactionOoh,
+        audioEls.sfxReactionOhNo,
+        audioEls.sfxReactionGasp
+      ].filter(Boolean);
+      if (pool.length === 0) return;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      playSfx(pick, 0.95);
+    }
+
+    function playHeckle() {
+      const pool = [
+        audioEls.sfxHeckle1,
+        audioEls.sfxHeckle2,
+        audioEls.sfxHeckle3
+      ].filter(Boolean);
+      if (pool.length === 0) return;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      playSfx(pick, 0.6);
+    }
+
+    function fadeTo(el, target, duration = 1200) {
+      if (!el) return;
+      const start = el.volume ?? 0;
+      const steps = 24;
+      const stepTime = duration / steps;
+      let i = 0;
+      const timer = setInterval(() => {
+        i += 1;
+        el.volume = start + (target - start) * (i / steps);
+        if (i >= steps) clearInterval(timer);
+      }, stepTime);
+    }
+
+    function startIntroTheme() {
+      const el = audioEls.introTheme;
+      if (!soundOn || !el) return;
+      el.volume = 0.7;
+      el.currentTime = 0;
+      el.play().catch(() => {});
+    }
+
+    function setIntroVolume(vol) {
+      const el = audioEls.introTheme;
+      if (!el) return;
+      el.volume = vol;
+    }
+
+    function duckIntroTo(vol, duration = 1200) {
+      const el = audioEls.introTheme;
+      if (!el) return;
+      fadeTo(el, vol, duration);
+    }
+
+    function stopIntroTheme() {
+      const el = audioEls.introTheme;
+      if (!el) return;
+      el.pause();
+      el.currentTime = 0;
+    }
+
+    function startMainTheme() {
+      const el = audioEls.mainTheme;
+      if (!soundOn || !el) return;
+      el.volume = 0.0;
+      el.play().catch(() => {});
+      fadeTo(el, 0.55, 1600);
+    }
+
+    function stopMainTheme() {
+      const el = audioEls.mainTheme;
+      if (!el) return;
+      el.pause();
+      el.currentTime = 0;
+    }
+
+    function startCrowd(volume = 0.08) {
+      const el = audioEls.crowdAmbience;
+      if (!soundOn || !el) return;
+      el.volume = volume;
+      el.play().catch(() => {});
+    }
+
+    function fadeCrowdTo(vol, duration = 1500) {
+      const el = audioEls.crowdAmbience;
+      if (!el) return;
+      fadeTo(el, vol, duration);
+    }
+
+    function stopCrowd() {
+      const el = audioEls.crowdAmbience;
+      if (!el) return;
+      el.pause();
+      el.currentTime = 0;
+    }
+
+    async function toggleSound() {
+      soundOn = !soundOn;
+      document.querySelector('.sound-btn').style.opacity = soundOn ? 1 : 0.3;
+      if (soundOn) {
+        await initAudio();
+        primeAudioElements();
+        if (showStarted) {
+          startIntroTheme();
+        }
+        startCrowd();
+      } else {
+        stopIntroTheme();
+        stopMainTheme();
+        stopCrowd();
+      }
+    }
 
     function playTone(freq, type, duration, vol = 0.1) {
       if (!soundOn || !audioCtx) return;
@@ -824,72 +1044,192 @@
     }
 
     function playJingle() {
-      if (!soundOn) return; initAudio();
-      // Extended "Game Show" Intro
-      // D-D-D-G-A-B-C (Climbing excitement)
-      let melody = [
-        { f: 293.66, d: 200 }, { f: 293.66, d: 200 }, { f: 293.66, d: 200 }, // D D D
-        { f: 392.00, d: 400 }, // G
-        { f: 440.00, d: 200 }, { f: 493.88, d: 200 }, // A B
-        { f: 523.25, d: 800 }  // C (High)
-      ];
-
-      let now = 0;
-      melody.forEach(n => {
-        setTimeout(() => playTone(n.f, 'square', n.d / 1000, 0.1), now);
-        now += n.d;
-      });
-
-      // Final chord hit
-      setTimeout(() => {
-        playTone(523.25, 'triangle', 1.0, 0.1);
-        playTone(659.25, 'triangle', 1.0, 0.1); // Harmony
-        playTone(783.99, 'triangle', 1.0, 0.1); // Harmony
-      }, now);
+      playSfx(audioEls.sfxApplause, 0.6);
     }
 
     function playApplause() {
-      if (!soundOn) return;
-      for (let i = 0; i < 15; i++) {
-        setTimeout(() => playNoise(0.2 + Math.random() * 0.3), i * 100);
-      }
+      playSfx(audioEls.sfxApplause, 0.9);
     }
 
     function playRollSound(duration = 5000) {
-      if (!soundOn) return; initAudio();
-      // Loop clicking sounds
-      const clicks = setInterval(() => {
-        playTone(200 + Math.random() * 200, 'square', 0.05, 0.05);
-      }, 100);
+      playDiceRoll(Math.max(1.2, duration / 1000));
+    }
 
-      // Stop after duration
-      setTimeout(() => {
-        clearInterval(clicks);
-        // "Ding!" at the end
-        playTone(1200, 'sine', 0.8, 0.1);
-      }, duration);
+    function playHarpGliss() {
+      if (!soundOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const freqs = [392, 440, 494, 523, 587, 659, 784, 880, 988, 1046];
+      freqs.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = f;
+        const start = now + i * 0.05;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.08, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + 0.7);
+      });
+    }
+
+    function playSuspenseHit() {
+      if (!soundOn) return;
+      if (audioEls.sfxSuspense) {
+        playSfx(audioEls.sfxSuspense, 0.9);
+        return;
+      }
+      // Fallback synth if the real clip isn't present.
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const freqs = [110, 165, 220];
+      const hits = [0, 0.22, 0.48];
+      const levels = [0.12, 0.16, 0.22];
+      hits.forEach((t, idx) => {
+        freqs.forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.value = f;
+          const start = now + t + i * 0.004;
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(levels[idx], start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + 0.55);
+        });
+      });
+    }
+
+    function playDiceRoll(duration = 1.6) {
+      if (!soundOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 500;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + duration);
+
+      for (let i = 0; i < 10; i++) {
+        const t = now + Math.random() * duration;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 600 + Math.random() * 500;
+        g.gain.setValueAtTime(0.06, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.04);
+      }
     }
 
     async function playSpeechSound() {
-      if (!soundOn) return;
-      await initAudio();
-      playTone(400 + Math.random() * 150, 'sine', 0.05, 0.08);
+      if (!soundOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 420 + Math.random() * 280;
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
     }
 
     function playFanfare() {
-      if (!soundOn) return; initAudio();
-      // TADA sound: C-E-G-C (High)
-      const now = audioCtx.currentTime;
-      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle'; osc.frequency.value = f;
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(now + i * 0.1);
-        gain.gain.setValueAtTime(0.3, now + i * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.5);
-        osc.stop(now + i * 0.1 + 0.5);
-      });
+      playSfx(audioEls.sfxApplause, 0.9);
+    }
+
+    function playChantUnison() {
+      if (!soundOn || !audioEls.sfxChant) return;
+      const base = audioEls.sfxChant;
+      const make = (rate, vol, delay) => {
+        const a = new Audio(base.src);
+        a.volume = vol;
+        a.playbackRate = rate;
+        setTimeout(() => { a.play().catch(() => {}); }, delay);
+      };
+      // Tight unison cluster
+      make(0.98, 1.0, 0);
+      make(1.0, 1.0, 15);
+      make(1.02, 0.95, 30);
+    }
+
+    function playHostClicks(duration = 1200) {
+      if (!soundOn || !audioCtx) return;
+      const endAt = Date.now() + duration;
+      const click = () => {
+        if (Date.now() > endAt) return;
+        playSpeechSound();
+        setTimeout(click, 60 + Math.random() * 80);
+      };
+      click();
+    }
+
+    async function debugPlayIntro() {
+      await initAudio();
+      primeAudioElements();
+      startIntroTheme();
+    }
+
+    async function debugHostClicks() {
+      await initAudio();
+      playHostClicks(1400);
+    }
+
+    async function debugChant() {
+      await initAudio();
+      primeAudioElements();
+      crowdChant();
+    }
+
+    async function debugReaction() {
+      await initAudio();
+      primeAudioElements();
+      playCrowdReaction();
+    }
+
+    async function debugSuspense() {
+      await initAudio();
+      playSuspenseHit();
+    }
+
+    async function debugDice() {
+      await initAudio();
+      playDiceRoll();
+    }
+
+    async function crowdChant() {
+      const cap = document.getElementById('announcerCaptions');
+      cap.textContent = 'BREAK THE ICE!';
+      cap.style.display = 'block';
+
+      if (soundOn) {
+        playChantUnison();
+        playApplause();
+      }
+
+      await wait(1400);
+      cap.style.display = 'none';
     }
 
     // === TEXT TO SPEECH ANNOUNCER ===
@@ -914,8 +1254,8 @@
         if (!voicesLoaded) loadVoices();
         const u = new SpeechSynthesisUtterance(text);
         if (announcerVoice) u.voice = announcerVoice;
-        u.rate = 0.82;
-        u.pitch = 1.0;
+        u.rate = 1.0;
+        u.pitch = 1.02;
         u.volume = 1;
 
         u.onend = () => {
@@ -939,6 +1279,7 @@
     }
 
     async function speak(text, duration = 2000) {
+      await initAudio();
       bubble.textContent = '';
       bubble.classList.add('show');
       const chars = text.split('');
@@ -962,7 +1303,12 @@
     function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     async function startShow() {
-      initAudio();
+      await initAudio();
+      primeAudioElements();
+      showStarted = true;
+      introComplete = false;
+      startIntroTheme();
+      startCrowd(0.08);
       const btn = document.getElementById('startBtn');
       btn.style.opacity = '0';
       await wait(300);
@@ -970,6 +1316,7 @@
 
       // ANNOUNCER INTRO
       playJingle();
+      fadeCrowdTo(0.2, 1800);
       await wait(1000);
 
       // 1. Announce Location (New!)
@@ -982,13 +1329,20 @@
 
       let hostName = getRandom(script.hostNames);
       await announcerSay("And here is your host... " + hostName + "!");
+      duckIntroTo(0.22, 1200);
+      fadeCrowdTo(0.38, 1400);
 
       // ACT 1: Host Enters
       moveHost('pos-center');
       playApplause();
+      playHeckle();
       await wait(2000);
 
       await speak(getRandom(script.greetings), 1500);
+      await wait(700); // let intro theme fade out before chant
+      await speak("Now let's get ready to...", 1200);
+      await crowdChant();
+      introComplete = true;
       await speak(getRandom(script.preShuffleComments), 1500);
 
       // Indicate curtain
@@ -997,7 +1351,7 @@
 
       // ACT 2: Reveal Participant
       document.getElementById('stage').classList.add('stage-open');
-      playJingle();
+      playHarpGliss();
 
       // Start shuffle and wait for it to trigger Act 3 internally
       shuffleParticipant();
@@ -1006,6 +1360,10 @@
     async function shuffleParticipant() {
       const pDisp = document.getElementById('partDisplay');
       pDisp.classList.add('show');
+
+      // Keep intro low and start ticking during rotation
+      duckIntroTo(0.1, 300);
+      startTicking();
 
       // Rotation Logic: Get only unused participants
       let available = employeeList.filter(e => !usedParticipants.includes(e));
@@ -1017,17 +1375,19 @@
       // Shuffle visual effect (can still show all names for effect)
       for (let i = 0; i < 12; i++) {
         pDisp.textContent = employeeList[Math.floor(Math.random() * employeeList.length)];
-        playTone(800, 'sine', 0.05);
         await wait(150 + (i * 40));
       }
 
       currentParticipant = available[Math.floor(Math.random() * available.length)];
       usedParticipants.push(currentParticipant);
 
+      stopTicking();
+      duckIntroTo(0.2, 400);
       pDisp.textContent = currentParticipant;
       pDisp.style.color = '#e23a2b';
       pDisp.style.transform = "scale(1.2)";
       playFanfare();
+      playCrowdReaction();
 
       confetti({ particleCount: 150, zIndex: 100, spread: 80, origin: { y: 0.6 } });
       await wait(1500); // Wait for confetti
@@ -1050,6 +1410,7 @@
       if (isPresent) {
         startAct3();
       } else {
+        playSfx(audioEls.sfxBuzzer, 0.7);
         await speak(getRandom(script.absentReactions), 3000);
         // Reset participant display and reshuffle
         const pDisp = document.getElementById('partDisplay');
@@ -1071,6 +1432,7 @@
 
       await speak(`Alright ${currentParticipant}, ${getRandom(script.winnerComments)}`, 2000);
       await speak(getRandom(script.choicePrompts), 2000);
+      playSuspenseHit();
 
       // Show Controls
       document.getElementById('choicePanel').classList.add('active');
@@ -1289,8 +1651,7 @@ function showSheetInfo(){
   google.script.run
     .withSuccessHandler(cfg => {
       if (!cfg || !cfg.url) { alert('No sheet configured for this app.'); return; }
-      alert('Sheet: ' + (cfg.name || 'Unnamed') + '
-' + cfg.url);
+      alert('Sheet: ' + (cfg.name || 'Unnamed') + '\\n' + cfg.url);
     })
     .withFailureHandler(err => alert('Failed to load sheet info: ' + err.message))
     .getSheetConfig();
